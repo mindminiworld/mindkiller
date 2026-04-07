@@ -1,16 +1,26 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Camera = workspace.CurrentCamera
 
+-- ตัวแปรตั้งค่าต่างๆ
 _G.AutoPunch = false
 _G.AutoEquipItems = false
-_G.AutoSize2 = false -- เพิ่มตัวแปรสำหรับ Size 2
+_G.AutoSize2 = false 
+_G.AntiKnockback = false
 _G.SelectedTargets = {} 
 _G.SpectatingPlayer = nil 
 local startTime = os.time()
+
+-- 🛡️ ระบบ Anti AFK
+LocalPlayer.Idled:Connect(function()
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new())
+    print("Anti-AFK: ป้องกันการโดนเตะเรียบร้อย")
+end)
 
 if PlayerGui:FindFirstChild("GeminiProUI") then
     PlayerGui.GeminiProUI:Destroy()
@@ -48,7 +58,7 @@ local Header = Instance.new("TextLabel", TopBar)
 Header.Size = UDim2.new(1, -30, 1, 0)
 Header.Position = UDim2.new(0, 15, 0, 0)
 Header.BackgroundTransparency = 1
-Header.Text = "⚡ ต่อยพวกไก่ๆควายๆ | หวัดดีพี่บ่าว: " .. LocalPlayer.DisplayName
+Header.Text = "⚡ ต่อยพวกไก่ๆควายๆ | ดีอ้าย : " .. LocalPlayer.DisplayName
 Header.TextColor3 = Color3.new(1, 1, 1)
 Header.Font = Enum.Font.GothamBold
 Header.TextSize = 15
@@ -153,7 +163,7 @@ QuickPunchBtn.MouseButton1Click:Connect(function()
     updatePunchBtn()
 end)
 
--- ปุ่มถือไข่ (รวมกับ Size Nan)
+-- ปุ่มถือไข่
 local AutoEquipBtn = Instance.new("TextButton", LeftPanel)
 AutoEquipBtn.Size = UDim2.new(1, 0, 0, 50)
 AutoEquipBtn.Position = UDim2.new(0, 0, 0, 60)
@@ -177,10 +187,10 @@ AutoEquipBtn.MouseButton1Click:Connect(function()
     updateEquipBtn()
 end)
 
--- ปุ่มปรับขนาด 2 (เพิ่มเข้ามาใหม่ด้านล่าง)
+-- ปุ่มปรับขนาด 2
 local AutoSize2Btn = Instance.new("TextButton", LeftPanel)
 AutoSize2Btn.Size = UDim2.new(1, 0, 0, 50)
-AutoSize2Btn.Position = UDim2.new(0, 0, 0, 120) -- เลื่อนลงมาใต้ปุ่มถือไข่
+AutoSize2Btn.Position = UDim2.new(0, 0, 0, 120)
 AutoSize2Btn.BackgroundColor3 = Color3.fromRGB(40, 10, 10)
 AutoSize2Btn.Text = " [ ปิด ]\nปรับขนาด 2"
 AutoSize2Btn.TextColor3 = Color3.new(1, 1, 1)
@@ -201,12 +211,36 @@ AutoSize2Btn.MouseButton1Click:Connect(function()
     updateSize2Btn()
 end)
 
+-- 🗿 ปุ่มกันกระเด็น
+local AntiKBBtn = Instance.new("TextButton", LeftPanel)
+AntiKBBtn.Size = UDim2.new(1, 0, 0, 50)
+AntiKBBtn.Position = UDim2.new(0, 0, 0, 180)
+AntiKBBtn.BackgroundColor3 = Color3.fromRGB(40, 10, 10)
+AntiKBBtn.Text = " [ ปิด ]\nกันกระเด็น"
+AntiKBBtn.TextColor3 = Color3.new(1, 1, 1)
+AntiKBBtn.Font = Enum.Font.GothamBold
+AntiKBBtn.TextSize = 13
+Instance.new("UICorner", AntiKBBtn).CornerRadius = UDim.new(0, 6)
+local Stroke4 = Instance.new("UIStroke", AntiKBBtn)
+Stroke4.Color = Color3.fromRGB(150, 50, 50)
+
+local function updateAntiKBBtn()
+    AntiKBBtn.Text = _G.AntiKnockback and " [ เปิด ]\nกันกระเด็น" or " [ ปิด ]\nกันกระเด็น"
+    AntiKBBtn.TextColor3 = _G.AntiKnockback and Color3.fromRGB(50, 255, 100) or Color3.new(1, 1, 1)
+    Stroke4.Color = _G.AntiKnockback and Color3.fromRGB(50, 255, 100) or Color3.fromRGB(150, 50, 50)
+end
+
+AntiKBBtn.MouseButton1Click:Connect(function()
+    _G.AntiKnockback = not _G.AntiKnockback
+    updateAntiKBBtn()
+end)
+
 -- Tab System
 local pages = {}
 local tabButtons = {}
 local function createTab(name, width)
     local TabBtn = Instance.new("TextButton", TabContainer)
-    TabBtn.Size = UDim2.new(0, width or 120, 1, 0)
+    TabBtn.Size = UDim2.new(0, width or 140, 1, 0)
     TabBtn.BackgroundColor3 = Color3.fromRGB(50, 15, 15)
     TabBtn.Text = name
     TabBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -238,7 +272,7 @@ local function createTab(name, width)
         TabBtn.BackgroundColor3 = Color3.fromRGB(150, 30, 30)
         TabBtn.TextColor3 = Color3.new(1, 1, 1)
         
-        if name == "ล็อคพวกโง่ไก่ๆ" then
+        if name == "ล็อคเป้า" then
             LeftPanel.Visible = true
             RightPanel.Visible = true
             Page.Parent = RightPanel
@@ -251,9 +285,9 @@ local function createTab(name, width)
     return Page
 end
 
-local PageTarget = createTab("ล็อคพวกโง่ไก่ๆ", 140)
-local PageSpectate = createTab("ส่องพวกโง่ๆ", 140)
-local PageStats = createTab("สเตตัส", 140)
+local PageTarget = createTab("ล็อคพวกโง่", 140)
+local PageSpectate = createTab("ส่องพวกโง่", 140)
+local PageStats = createTab("อื่นๆ", 140)
 
 pages[1].Parent = RightPanel
 pages[1].Visible = true
@@ -359,7 +393,7 @@ task.spawn(function()
     end
 end)
 
--- ระบบปิดการทำงานไข่ (เพื่อไม่ให้มันรบกวนเวลาถือ)
+-- ระบบปิดการทำงานไข่
 task.spawn(function()
     while task.wait(0.5) do
         local egg = (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Protein Egg")) or LocalPlayer.Backpack:FindFirstChild("Protein Egg")
@@ -372,16 +406,14 @@ end)
 local muscleEvent = LocalPlayer:WaitForChild("muscleEvent", 10)
 local remotePath = game:GetService("ReplicatedStorage"):WaitForChild("rEvents"):WaitForChild("changeSpeedSizeRemote")
 
--- LOOP หลัก: จัดการเรื่องถือไอเทม, ต่อย, และ SIZE NAN
+-- LOOP สำหรับ ถือไอเทม, อนิเมชั่นต่อยหลอกๆ และ ขนาด Nan
 task.spawn(function()
     while task.wait(0.05) do
         local char = LocalPlayer.Character
         local backpack = LocalPlayer:FindFirstChild("Backpack")
         
         if char and char:FindFirstChild("Humanoid") then
-            -- ถ้าเปิดปุ่ม "ถือไข่"
             if _G.AutoEquipItems then
-                -- 1. สวมใส่ไอเทม
                 if backpack then
                     if not char:FindFirstChild("Punch") then
                         local punchTool = backpack:FindFirstChild("Punch")
@@ -392,14 +424,9 @@ task.spawn(function()
                         if eggTool then eggTool.Parent = char end
                     end
                 end
-                
-                -- 2. ปรับ Size เป็น Nan (0/0)
-                pcall(function()
-                    remotePath:InvokeServer("changeSize", 0/0)
-                end)
+                pcall(function() remotePath:InvokeServer("changeSize", 0/0) end)
             end
 
-            -- ถ้าเปิดปุ่ม "ต่อย"
             if _G.AutoPunch then
                 if not _G.AutoEquipItems and not char:FindFirstChild("Punch") and backpack then
                     local punchTool = backpack:FindFirstChild("Punch")
@@ -414,45 +441,84 @@ task.spawn(function()
     end
 end)
 
--- LOOP สำหรับ Auto Size 2 (ทำงานแยกกัน)
+-- LOOP สำหรับ Auto Size 2
 task.spawn(function()
     while task.wait(1) do
         if _G.AutoSize2 then
-            pcall(function()
-                remotePath:InvokeServer("changeSize", 2)
-            end)
+            pcall(function() remotePath:InvokeServer("changeSize", 2) end)
         end
     end
 end)
 
--- ระบบฆ่าคน (Kill Aura / Touch Interest)
-local runConnection = RunService.RenderStepped:Connect(function()
-    if _G.AutoPunch then
-        for _, targetPlayer in pairs(Players:GetPlayers()) do
-            if _G.SelectedTargets[targetPlayer.UserId] and targetPlayer.Character then
-                local targetPart = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
-                local myArm = LocalPlayer.Character and (LocalPlayer.Character:FindFirstChild("RightHand") or LocalPlayer.Character:FindFirstChild("Right Arm"))
-                if targetPart and myArm then
-                    firetouchinterest(targetPart, myArm, 0)
-                    firetouchinterest(targetPart, myArm, 1)
+-- 🗿 ระบบ Anti Knockback (ทำใน Stepped เพื่อดักก่อน Physics ของเกมทำงาน)
+local kbConnection = RunService.Stepped:Connect(function()
+    if _G.AntiKnockback then
+        pcall(function()
+            local char = LocalPlayer.Character
+            if char then
+                -- สแกนหาชิ้นส่วนทุกชิ้นในตัวละคร เพราะบางทีเกมใส่แรงไว้ที่ Torso หรือ แขน
+                for _, part in pairs(char:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        for _, v in pairs(part:GetChildren()) do
+                            if v:IsA("BodyVelocity") or v:IsA("BodyGyro") or v:IsA("BodyPosition") or v:IsA("BodyThrust") or v:IsA("BodyAngularVelocity") or v:IsA("RocketPropulsion") or v:IsA("VectorForce") or v:IsA("LinearVelocity") then
+                                v:Destroy()
+                            end
+                        end
+                    end
                 end
             end
+        end)
+    end
+end)
+
+-- ⚡ ระบบต่อยรัว ⚡
+task.spawn(function()
+    while true do
+        if _G.AutoPunch then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local myArm = char and (char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm"))
+                
+                if myArm and myArm:IsDescendantOf(workspace) then
+                    for _, targetPlayer in pairs(Players:GetPlayers()) do
+                        if _G.SelectedTargets[targetPlayer.UserId] and targetPlayer.Character then
+                            local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+                            if targetRoot and targetRoot:IsDescendantOf(workspace) then
+                                for _ = 1, 2 do
+                                    firetouchinterest(myArm, targetRoot, 0)
+                                    task.wait(0.01)
+                                    firetouchinterest(myArm, targetRoot, 1)
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+            task.wait(0.08) 
+        else
+            task.wait(0.1)
         end
     end
+end)
 
+-- 👁️ ระบบส่องหน้าจอ (Spectate)
+local runConnection = RunService.RenderStepped:Connect(function()
     if _G.SpectatingPlayer and _G.SpectatingPlayer.Character then
         local targetHum = _G.SpectatingPlayer.Character:FindFirstChild("Humanoid")
         if targetHum then Camera.CameraSubject = targetHum end
     end
 end)
 
+-- ปุ่มปิดสคริปต์
 CloseBtn.MouseButton1Click:Connect(function()
     _G.AutoPunch = false
     _G.AutoEquipItems = false
-    _G.AutoSize2 = false -- คืนค่าตอนปิดสคริปต์
+    _G.AutoSize2 = false
+    _G.AntiKnockback = false
     _G.SpectatingPlayer = nil
     local char = LocalPlayer.Character
     if char and char:FindFirstChild("Humanoid") then Camera.CameraSubject = char.Humanoid end
     runConnection:Disconnect()
+    kbConnection:Disconnect() -- ตัดการทำงานของ Anti Knockback ด้วย
     ScreenGui:Destroy()
 end)
