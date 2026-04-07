@@ -1,0 +1,458 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Camera = workspace.CurrentCamera
+
+_G.AutoPunch = false
+_G.AutoEquipItems = false
+_G.AutoSize2 = false -- เพิ่มตัวแปรสำหรับ Size 2
+_G.SelectedTargets = {} 
+_G.SpectatingPlayer = nil 
+local startTime = os.time()
+
+if PlayerGui:FindFirstChild("GeminiProUI") then
+    PlayerGui.GeminiProUI:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui", PlayerGui)
+ScreenGui.Name = "GeminiProUI"
+ScreenGui.ResetOnSpawn = false
+
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 460, 0, 400)
+MainFrame.Position = UDim2.new(0.5, -230, 0.5, -200)
+MainFrame.BackgroundColor3 = Color3.fromRGB(60, 5, 5) 
+MainFrame.BackgroundTransparency = 0.25 
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.ClipsDescendants = true
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
+
+local UIStroke = Instance.new("UIStroke", MainFrame)
+UIStroke.Color = Color3.fromRGB(255, 60, 60)
+UIStroke.Thickness = 1.5
+
+local TopBar = Instance.new("TextButton", MainFrame)
+TopBar.Name = "TopBar"
+TopBar.Size = UDim2.new(1, 0, 0, 35)
+TopBar.BackgroundColor3 = Color3.fromRGB(30, 0, 0)
+TopBar.BackgroundTransparency = 0.3
+TopBar.BorderSizePixel = 0
+TopBar.AutoButtonColor = false
+TopBar.Text = ""
+Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 10)
+
+local Header = Instance.new("TextLabel", TopBar)
+Header.Size = UDim2.new(1, -30, 1, 0)
+Header.Position = UDim2.new(0, 15, 0, 0)
+Header.BackgroundTransparency = 1
+Header.Text = "⚡ ต่อยพวกไก่ๆควายๆ | หวัดดีพี่บ่าว: " .. LocalPlayer.DisplayName
+Header.TextColor3 = Color3.new(1, 1, 1)
+Header.Font = Enum.Font.GothamBold
+Header.TextSize = 15
+Header.TextXAlignment = Enum.TextXAlignment.Left
+
+-- ระบบลากเมนู
+local dragging, dragInput, dragStart, startPos
+local function update(input)
+    local delta = input.Position - dragStart
+    MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+TopBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+TopBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
+
+local TabContainer = Instance.new("Frame", MainFrame)
+TabContainer.Size = UDim2.new(1, 0, 0, 35)
+TabContainer.Position = UDim2.new(0, 0, 0, 40)
+TabContainer.BackgroundTransparency = 1
+
+local ContentArea = Instance.new("Frame", MainFrame)
+ContentArea.Size = UDim2.new(1, -20, 1, -90)
+ContentArea.Position = UDim2.new(0, 10, 0, 85)
+ContentArea.BackgroundTransparency = 1
+
+-- ระบบย่อเมนู
+local isMinimized = false
+TopBar.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    if isMinimized then
+        TabContainer.Visible = false
+        ContentArea.Visible = false
+        MainFrame:TweenSize(UDim2.new(0, 460, 0, 35), "Out", "Quad", 0.3, true)
+    else
+        MainFrame:TweenSize(UDim2.new(0, 460, 0, 400), "Out", "Quad", 0.3, true)
+        task.wait(0.2) 
+        if not isMinimized then
+            TabContainer.Visible = true
+            ContentArea.Visible = true
+        end
+    end
+end)
+
+local TabListLayout = Instance.new("UIListLayout", TabContainer)
+TabListLayout.FillDirection = Enum.FillDirection.Horizontal
+TabListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+TabListLayout.Padding = UDim.new(0, 5)
+
+local LeftPanel = Instance.new("Frame", ContentArea)
+LeftPanel.Size = UDim2.new(0.35, 0, 1, 0)
+LeftPanel.BackgroundTransparency = 1
+LeftPanel.Visible = false 
+
+local RightPanel = Instance.new("Frame", ContentArea)
+RightPanel.Size = UDim2.new(0.65, -5, 1, 0)
+RightPanel.Position = UDim2.new(0.35, 5, 0, 0)
+RightPanel.BackgroundTransparency = 1
+RightPanel.Visible = false
+
+-- ปุ่มต่อย
+local QuickPunchBtn = Instance.new("TextButton", LeftPanel)
+QuickPunchBtn.Size = UDim2.new(1, 0, 0, 50)
+QuickPunchBtn.BackgroundColor3 = Color3.fromRGB(40, 10, 10)
+QuickPunchBtn.Text = " [ ปิด ]\nต่อยพวกโง่"
+QuickPunchBtn.TextColor3 = Color3.new(1, 1, 1)
+QuickPunchBtn.Font = Enum.Font.GothamBold
+QuickPunchBtn.TextSize = 13
+Instance.new("UICorner", QuickPunchBtn).CornerRadius = UDim.new(0, 6)
+local Stroke1 = Instance.new("UIStroke", QuickPunchBtn)
+Stroke1.Color = Color3.fromRGB(150, 50, 50)
+
+local function updatePunchBtn()
+    QuickPunchBtn.Text = _G.AutoPunch and " [ เปิด ]\nต่อยพวกโง่" or " [ ปิด ]\nต่อยพวกโง่"
+    QuickPunchBtn.TextColor3 = _G.AutoPunch and Color3.fromRGB(50, 255, 100) or Color3.new(1, 1, 1)
+    Stroke1.Color = _G.AutoPunch and Color3.fromRGB(50, 255, 100) or Color3.fromRGB(150, 50, 50)
+end
+
+QuickPunchBtn.MouseButton1Click:Connect(function()
+    _G.AutoPunch = not _G.AutoPunch
+    updatePunchBtn()
+end)
+
+-- ปุ่มถือไข่ (รวมกับ Size Nan)
+local AutoEquipBtn = Instance.new("TextButton", LeftPanel)
+AutoEquipBtn.Size = UDim2.new(1, 0, 0, 50)
+AutoEquipBtn.Position = UDim2.new(0, 0, 0, 60)
+AutoEquipBtn.BackgroundColor3 = Color3.fromRGB(40, 10, 10)
+AutoEquipBtn.Text = " [ ปิด ]\nถือไข่ + Nan"
+AutoEquipBtn.TextColor3 = Color3.new(1, 1, 1)
+AutoEquipBtn.Font = Enum.Font.GothamBold
+AutoEquipBtn.TextSize = 13
+Instance.new("UICorner", AutoEquipBtn).CornerRadius = UDim.new(0, 6)
+local Stroke2 = Instance.new("UIStroke", AutoEquipBtn)
+Stroke2.Color = Color3.fromRGB(150, 50, 50)
+
+local function updateEquipBtn()
+    AutoEquipBtn.Text = _G.AutoEquipItems and " [ เปิด ]\nถือไข่ + Nan" or " [ ปิด ]\nถือไข่ + Nan"
+    AutoEquipBtn.TextColor3 = _G.AutoEquipItems and Color3.fromRGB(50, 255, 100) or Color3.new(1, 1, 1)
+    Stroke2.Color = _G.AutoEquipItems and Color3.fromRGB(50, 255, 100) or Color3.fromRGB(150, 50, 50)
+end
+
+AutoEquipBtn.MouseButton1Click:Connect(function()
+    _G.AutoEquipItems = not _G.AutoEquipItems
+    updateEquipBtn()
+end)
+
+-- ปุ่มปรับขนาด 2 (เพิ่มเข้ามาใหม่ด้านล่าง)
+local AutoSize2Btn = Instance.new("TextButton", LeftPanel)
+AutoSize2Btn.Size = UDim2.new(1, 0, 0, 50)
+AutoSize2Btn.Position = UDim2.new(0, 0, 0, 120) -- เลื่อนลงมาใต้ปุ่มถือไข่
+AutoSize2Btn.BackgroundColor3 = Color3.fromRGB(40, 10, 10)
+AutoSize2Btn.Text = " [ ปิด ]\nปรับขนาด 2"
+AutoSize2Btn.TextColor3 = Color3.new(1, 1, 1)
+AutoSize2Btn.Font = Enum.Font.GothamBold
+AutoSize2Btn.TextSize = 13
+Instance.new("UICorner", AutoSize2Btn).CornerRadius = UDim.new(0, 6)
+local Stroke3 = Instance.new("UIStroke", AutoSize2Btn)
+Stroke3.Color = Color3.fromRGB(150, 50, 50)
+
+local function updateSize2Btn()
+    AutoSize2Btn.Text = _G.AutoSize2 and " [ เปิด ]\nปรับขนาด 2" or " [ ปิด ]\nปรับขนาด 2"
+    AutoSize2Btn.TextColor3 = _G.AutoSize2 and Color3.fromRGB(50, 255, 100) or Color3.new(1, 1, 1)
+    Stroke3.Color = _G.AutoSize2 and Color3.fromRGB(50, 255, 100) or Color3.fromRGB(150, 50, 50)
+end
+
+AutoSize2Btn.MouseButton1Click:Connect(function()
+    _G.AutoSize2 = not _G.AutoSize2
+    updateSize2Btn()
+end)
+
+-- Tab System
+local pages = {}
+local tabButtons = {}
+local function createTab(name, width)
+    local TabBtn = Instance.new("TextButton", TabContainer)
+    TabBtn.Size = UDim2.new(0, width or 120, 1, 0)
+    TabBtn.BackgroundColor3 = Color3.fromRGB(50, 15, 15)
+    TabBtn.Text = name
+    TabBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    TabBtn.Font = Enum.Font.GothamBold
+    TabBtn.TextSize = 14
+    Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 6)
+
+    local Page = Instance.new("ScrollingFrame", ContentArea)
+    Page.Size = UDim2.new(1, 0, 1, 0)
+    Page.BackgroundTransparency = 1
+    Page.BorderSizePixel = 0
+    Page.ScrollBarThickness = 4
+    Page.Visible = false
+    Page.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    
+    local PageLayout = Instance.new("UIListLayout", Page)
+    PageLayout.Padding = UDim.new(0, 8)
+
+    table.insert(pages, Page)
+    table.insert(tabButtons, TabBtn)
+
+    TabBtn.MouseButton1Click:Connect(function()
+        for _, p in pairs(pages) do p.Visible = false end
+        for _, b in pairs(tabButtons) do 
+            b.BackgroundColor3 = Color3.fromRGB(50, 15, 15)
+            b.TextColor3 = Color3.fromRGB(200, 200, 200)
+        end
+        Page.Visible = true
+        TabBtn.BackgroundColor3 = Color3.fromRGB(150, 30, 30)
+        TabBtn.TextColor3 = Color3.new(1, 1, 1)
+        
+        if name == "ล็อคพวกโง่ไก่ๆ" then
+            LeftPanel.Visible = true
+            RightPanel.Visible = true
+            Page.Parent = RightPanel
+        else
+            LeftPanel.Visible = false
+            RightPanel.Visible = false
+            Page.Parent = ContentArea
+        end
+    end)
+    return Page
+end
+
+local PageTarget = createTab("ล็อคพวกโง่ไก่ๆ", 140)
+local PageSpectate = createTab("ส่องพวกโง่ๆ", 140)
+local PageStats = createTab("สเตตัส", 140)
+
+pages[1].Parent = RightPanel
+pages[1].Visible = true
+LeftPanel.Visible = true
+RightPanel.Visible = true
+tabButtons[1].BackgroundColor3 = Color3.fromRGB(150, 30, 30)
+tabButtons[1].TextColor3 = Color3.new(1, 1, 1)
+
+-- ฟังก์ชัน Refresh List ผู้เล่น
+local function refreshLists()
+    for _, child in pairs(PageTarget:GetChildren()) do
+        if child:IsA("TextButton") or child:IsA("TextLabel") then child:Destroy() end
+    end
+    for _, child in pairs(PageSpectate:GetChildren()) do
+        if child:IsA("TextButton") or child:IsA("TextLabel") then child:Destroy() end
+    end
+
+    local lockLabel = Instance.new("TextLabel", PageTarget)
+    lockLabel.Size = UDim2.new(1, 0, 0, 25)
+    lockLabel.BackgroundTransparency = 1
+    lockLabel.Text = "เลือกชื่อพวกโง่ๆเพื่อฆ่ามัน"
+    lockLabel.TextColor3 = Color3.fromRGB(255, 150, 150)
+    lockLabel.Font = Enum.Font.GothamBold
+    lockLabel.TextSize = 14
+
+    local ClearLockBtn = Instance.new("TextButton", PageTarget)
+    ClearLockBtn.Size = UDim2.new(1, 0, 0, 25)
+    ClearLockBtn.BackgroundColor3 = Color3.fromRGB(150, 30, 30)
+    ClearLockBtn.Text = "เคลียร์ชื่อพวกไก่"
+    ClearLockBtn.TextColor3 = Color3.new(1, 1, 1)
+    ClearLockBtn.Font = Enum.Font.GothamBold
+    Instance.new("UICorner", ClearLockBtn).CornerRadius = UDim.new(0, 6)
+    ClearLockBtn.MouseButton1Click:Connect(function()
+        _G.SelectedTargets = {}
+        refreshLists()
+    end)
+
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            local lockBtn = Instance.new("TextButton", PageTarget)
+            lockBtn.Size = UDim2.new(1, 0, 0, 32)
+            local isLocked = _G.SelectedTargets[p.UserId]
+            lockBtn.BackgroundColor3 = isLocked and Color3.fromRGB(150, 30, 30) or Color3.fromRGB(40, 10, 10)
+            lockBtn.Text = (isLocked and "🔒 " or "") .. p.DisplayName
+            lockBtn.TextColor3 = Color3.new(1, 1, 1)
+            lockBtn.Font = Enum.Font.GothamSemibold
+            lockBtn.TextSize = 14
+            Instance.new("UICorner", lockBtn).CornerRadius = UDim.new(0, 4)
+            lockBtn.MouseButton1Click:Connect(function()
+                _G.SelectedTargets[p.UserId] = not _G.SelectedTargets[p.UserId]
+                refreshLists()
+            end)
+
+            local specBtn = Instance.new("TextButton", PageSpectate)
+            specBtn.Size = UDim2.new(1, 0, 0, 35)
+            local isSpec = (_G.SpectatingPlayer == p)
+            specBtn.BackgroundColor3 = isSpec and Color3.fromRGB(200, 50, 50) or Color3.fromRGB(40, 10, 10)
+            specBtn.Text = (isSpec and "👁️ " or "") .. p.DisplayName
+            specBtn.TextColor3 = Color3.new(1, 1, 1)
+            specBtn.Font = Enum.Font.GothamSemibold
+            specBtn.TextSize = 15
+            Instance.new("UICorner", specBtn).CornerRadius = UDim.new(0, 6)
+            specBtn.MouseButton1Click:Connect(function()
+                if _G.SpectatingPlayer == p then
+                    _G.SpectatingPlayer = nil
+                    local char = LocalPlayer.Character
+                    if char and char:FindFirstChild("Humanoid") then Camera.CameraSubject = char.Humanoid end
+                else
+                    _G.SpectatingPlayer = p
+                end
+                refreshLists()
+            end)
+        end
+    end
+end
+
+Players.PlayerRemoving:Connect(refreshLists)
+Players.PlayerAdded:Connect(refreshLists)
+refreshLists()
+
+-- Stats Page
+local TimeLabel = Instance.new("TextLabel", PageStats)
+TimeLabel.Size = UDim2.new(1, 0, 0, 50)
+TimeLabel.BackgroundTransparency = 1
+TimeLabel.TextColor3 = Color3.new(1, 1, 1)
+TimeLabel.Font = Enum.Font.GothamBold
+TimeLabel.TextSize = 20
+
+local CloseBtn = Instance.new("TextButton", PageStats)
+CloseBtn.Size = UDim2.new(1, 0, 0, 45)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
+CloseBtn.Text = "ปิดสคริปต์"
+CloseBtn.TextColor3 = Color3.new(1, 1, 1)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 16
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+
+task.spawn(function()
+    while task.wait(1) do
+        if not ScreenGui.Parent then break end
+        local diff = os.time() - startTime
+        TimeLabel.Text = string.format("⏱️ เวลาที่เล่น: %02dm %02ds", math.floor(diff/60), diff%60)
+    end
+end)
+
+-- ระบบปิดการทำงานไข่ (เพื่อไม่ให้มันรบกวนเวลาถือ)
+task.spawn(function()
+    while task.wait(0.5) do
+        local egg = (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Protein Egg")) or LocalPlayer.Backpack:FindFirstChild("Protein Egg")
+        if egg and egg:IsA("Tool") then
+            egg.Enabled = false 
+        end
+    end
+end)
+
+local muscleEvent = LocalPlayer:WaitForChild("muscleEvent", 10)
+local remotePath = game:GetService("ReplicatedStorage"):WaitForChild("rEvents"):WaitForChild("changeSpeedSizeRemote")
+
+-- LOOP หลัก: จัดการเรื่องถือไอเทม, ต่อย, และ SIZE NAN
+task.spawn(function()
+    while task.wait(0.05) do
+        local char = LocalPlayer.Character
+        local backpack = LocalPlayer:FindFirstChild("Backpack")
+        
+        if char and char:FindFirstChild("Humanoid") then
+            -- ถ้าเปิดปุ่ม "ถือไข่"
+            if _G.AutoEquipItems then
+                -- 1. สวมใส่ไอเทม
+                if backpack then
+                    if not char:FindFirstChild("Punch") then
+                        local punchTool = backpack:FindFirstChild("Punch")
+                        if punchTool then punchTool.Parent = char end 
+                    end
+                    if not char:FindFirstChild("Protein Egg") then
+                        local eggTool = backpack:FindFirstChild("Protein Egg")
+                        if eggTool then eggTool.Parent = char end
+                    end
+                end
+                
+                -- 2. ปรับ Size เป็น Nan (0/0)
+                pcall(function()
+                    remotePath:InvokeServer("changeSize", 0/0)
+                end)
+            end
+
+            -- ถ้าเปิดปุ่ม "ต่อย"
+            if _G.AutoPunch then
+                if not _G.AutoEquipItems and not char:FindFirstChild("Punch") and backpack then
+                    local punchTool = backpack:FindFirstChild("Punch")
+                    if punchTool then char.Humanoid:EquipTool(punchTool) end
+                end
+                if muscleEvent then
+                    muscleEvent:FireServer("punch", "leftHand")
+                    muscleEvent:FireServer("punch", "rightHand")
+                end
+            end
+        end
+    end
+end)
+
+-- LOOP สำหรับ Auto Size 2 (ทำงานแยกกัน)
+task.spawn(function()
+    while task.wait(1) do
+        if _G.AutoSize2 then
+            pcall(function()
+                remotePath:InvokeServer("changeSize", 2)
+            end)
+        end
+    end
+end)
+
+-- ระบบฆ่าคน (Kill Aura / Touch Interest)
+local runConnection = RunService.RenderStepped:Connect(function()
+    if _G.AutoPunch then
+        for _, targetPlayer in pairs(Players:GetPlayers()) do
+            if _G.SelectedTargets[targetPlayer.UserId] and targetPlayer.Character then
+                local targetPart = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+                local myArm = LocalPlayer.Character and (LocalPlayer.Character:FindFirstChild("RightHand") or LocalPlayer.Character:FindFirstChild("Right Arm"))
+                if targetPart and myArm then
+                    firetouchinterest(targetPart, myArm, 0)
+                    firetouchinterest(targetPart, myArm, 1)
+                end
+            end
+        end
+    end
+
+    if _G.SpectatingPlayer and _G.SpectatingPlayer.Character then
+        local targetHum = _G.SpectatingPlayer.Character:FindFirstChild("Humanoid")
+        if targetHum then Camera.CameraSubject = targetHum end
+    end
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    _G.AutoPunch = false
+    _G.AutoEquipItems = false
+    _G.AutoSize2 = false -- คืนค่าตอนปิดสคริปต์
+    _G.SpectatingPlayer = nil
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then Camera.CameraSubject = char.Humanoid end
+    runConnection:Disconnect()
+    ScreenGui:Destroy()
+end)
