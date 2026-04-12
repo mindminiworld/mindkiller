@@ -9,14 +9,24 @@ local Camera = workspace.CurrentCamera
 
 -- ตัวแปรตั้งค่าต่างๆ
 _G.AutoPunch = false
-_G.PCPunch = false -- เพิ่มตัวแปรสำหรับ PC ONLY
+_G.PCPunch = false
 _G.AutoEquipItems = false
 _G.AutoSize2 = false 
 _G.AntiKnockback = false
 _G.HidePunchAnim = false
-_G.AutoFollow = false -- 🌟 ตัวแปรใหม่: สำหรับระบบตามติด + Hitbox
+_G.AutoFollow = false 
 _G.SelectedTargets = {} 
 _G.SpectatingPlayer = nil 
+
+-- ตัวแปรสำหรับเมนูทำบัค
+_G.AutoBuyPet = false
+_G.AutoBuyAura = false
+_G.SelectedPetToBuy = ""
+_G.SelectedAuraToBuy = ""
+_G.AutoRockLegend = false
+_G.AutoRockMuscle = false
+_G.AutoRockAncient = false
+
 local startTime = os.time()
 
 -- 🛡️ ระบบ Anti AFK
@@ -160,14 +170,12 @@ local function createFeatureBtn(name, defaultText, posOffset, onClick, globalVar
     end)
 end
 
--- สร้างปุ่มต่างๆ
 createFeatureBtn("AutoPunch", " [ ปิด ]\nต่อยพวกโง่", 0, function(Btn, Stroke, isOn)
     Btn.Text = isOn and " [ เปิด ]\nต่อยพวกโง่" or " [ ปิด ]\nต่อยพวกโง่"
     Btn.TextColor3 = isOn and Color3.fromRGB(50, 255, 100) or Color3.new(1, 1, 1)
     Stroke.Color = isOn and Color3.fromRGB(50, 255, 100) or Color3.fromRGB(180, 50, 50)
 end, "AutoPunch")
 
--- 🔥 ปุ่มใหม่ PC ONLY (ดึงสคริปต์ V1 มาใส่)
 createFeatureBtn("PCPunch", " [ ปิด ]\nPC ONLY", 55, function(Btn, Stroke, isOn)
     Btn.Text = isOn and " [ เปิด ]\nPC ONLY" or " [ ปิด ]\nPC ONLY"
     Btn.TextColor3 = isOn and Color3.fromRGB(50, 255, 100) or Color3.new(1, 1, 1)
@@ -268,7 +276,6 @@ createFeatureBtn("NoAnim", " [ ปิด ]\n(ลบอนิเมชั่น)"
     ToggleNoAnim(isOn)
 end, "HidePunchAnim")
 
--- 🌟 ปุ่มใหม่: เปิดระบบเดินตามหลังเป้าหมาย + ขยาย Hitbox
 createFeatureBtn("AutoFollow", " [ ปิด ]\nตามตัว", 330, function(Btn, Stroke, isOn)
     Btn.Text = isOn and " [ เปิด ]\nตามตัว" or " [ ปิด ]\nตามตัว"
     Btn.TextColor3 = isOn and Color3.fromRGB(50, 255, 100) or Color3.new(1, 1, 1)
@@ -280,12 +287,12 @@ local pages = {}
 local tabButtons = {}
 local function createTab(name, width)
     local TabBtn = Instance.new("TextButton", TabContainer)
-    TabBtn.Size = UDim2.new(0, width or 140, 1, 0)
+    TabBtn.Size = UDim2.new(0, width or 100, 1, 0)
     TabBtn.BackgroundColor3 = Color3.fromRGB(40, 15, 15)
     TabBtn.Text = name
     TabBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
     TabBtn.Font = Enum.Font.GothamBold
-    TabBtn.TextSize = 14
+    TabBtn.TextSize = 13
     Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 8)
 
     local Page = Instance.new("ScrollingFrame", ContentArea)
@@ -326,9 +333,10 @@ local function createTab(name, width)
     return Page
 end
 
-local PageTarget = createTab("ล็อคพวกโง่", 130)
-local PageSpectate = createTab("ส่องพวกโง่", 130)
-local PageStats = createTab("อื่นๆ", 130)
+local PageTarget = createTab("ล็อคพวกโง่", 110)
+local PageSpectate = createTab("ส่องพวกโง่", 110)
+local PageBug = createTab("ทำบัค", 110)
+local PageStats = createTab("อื่นๆ", 110)
 
 -- หน้าแรกเริ่มต้น
 pages[1].Parent = RightPanel
@@ -337,6 +345,258 @@ LeftPanel.Visible = true
 RightPanel.Visible = true
 tabButtons[1].BackgroundColor3 = Color3.fromRGB(200, 40, 40)
 tabButtons[1].TextColor3 = Color3.new(1, 1, 1)
+
+---------------------------------------------------------
+-- 🌟 ส่วนของการสร้างเมนูในหน้า "ทำบัค" 🌟
+---------------------------------------------------------
+local function createBugToggle(text, globalVarName)
+    local btn = Instance.new("TextButton", PageBug)
+    btn.Size = UDim2.new(1, 0, 0, 35)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 20, 20)
+    btn.Text = "⬛ " .. text
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.GothamMedium
+    btn.TextSize = 14
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    Instance.new("UIPadding", btn).PaddingLeft = UDim.new(0, 10)
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    
+    btn.MouseButton1Click:Connect(function()
+        _G[globalVarName] = not _G[globalVarName]
+        local isOn = _G[globalVarName]
+        btn.BackgroundColor3 = isOn and Color3.fromRGB(180, 150, 40) or Color3.fromRGB(40, 20, 20)
+        btn.Text = (isOn and "🟨 " or "⬛ ") .. text
+    end)
+end
+
+-- 🌟 ระบบ Dropdown พร้อมระบบล็อคการเลื่อนทะลุ (Scroll Bleed Fix) 🌟
+local function createBugDropdown(placeholder, options, globalVarName)
+    local container = Instance.new("Frame", PageBug)
+    container.Size = UDim2.new(1, 0, 0, 35)
+    container.BackgroundTransparency = 1
+    container.ClipsDescendants = true
+    
+    local headerBtn = Instance.new("TextButton", container)
+    headerBtn.Size = UDim2.new(1, 0, 0, 35)
+    headerBtn.BackgroundColor3 = Color3.fromRGB(35, 15, 15)
+    headerBtn.TextColor3 = Color3.new(1, 1, 1)
+    headerBtn.Font = Enum.Font.GothamMedium
+    headerBtn.TextSize = 14
+    headerBtn.Text = placeholder .. " 🔽"
+    Instance.new("UICorner", headerBtn).CornerRadius = UDim.new(0, 6)
+    
+    local scroll = Instance.new("ScrollingFrame", container)
+    scroll.Size = UDim2.new(1, 0, 0, 150)
+    scroll.Position = UDim2.new(0, 0, 0, 35)
+    scroll.BackgroundColor3 = Color3.fromRGB(25, 10, 10)
+    scroll.BorderSizePixel = 0
+    scroll.ScrollBarThickness = 4
+    scroll.Visible = false
+
+    -- ล็อคหน้าจอหลักตอนเอาเมาส์ชี้ Dropdown
+    scroll.MouseEnter:Connect(function()
+        PageBug.ScrollingEnabled = false
+    end)
+    scroll.MouseLeave:Connect(function()
+        PageBug.ScrollingEnabled = true
+    end)
+    
+    local listLayout = Instance.new("UIListLayout", scroll)
+    
+    local isOpen = false
+    headerBtn.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        if isOpen then
+            container.Size = UDim2.new(1, 0, 0, 185)
+            scroll.Visible = true
+            headerBtn.Text = "เลือกแล้วปิดหน้าต่าง 🔼"
+        else
+            container.Size = UDim2.new(1, 0, 0, 35)
+            scroll.Visible = false
+            PageBug.ScrollingEnabled = true
+            if _G[globalVarName] ~= "" then
+                headerBtn.Text = "เลือก: " .. _G[globalVarName] .. " 🔽"
+            else
+                headerBtn.Text = placeholder .. " 🔽"
+            end
+        end
+    end)
+    
+    for _, opt in ipairs(options) do
+        local optBtn = Instance.new("TextButton", scroll)
+        optBtn.Size = UDim2.new(1, 0, 0, 30)
+        optBtn.BackgroundColor3 = Color3.fromRGB(35, 15, 15)
+        optBtn.BackgroundTransparency = 0.5
+        optBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+        optBtn.Font = Enum.Font.Gotham
+        optBtn.TextSize = 13
+        optBtn.Text = opt.display
+        
+        optBtn.MouseButton1Click:Connect(function()
+            _G[globalVarName] = opt.value
+            headerBtn.Text = "เลือก: " .. opt.value .. " 🔽"
+            isOpen = false
+            container.Size = UDim2.new(1, 0, 0, 35)
+            scroll.Visible = false
+            PageBug.ScrollingEnabled = true
+        end)
+    end
+    scroll.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y)
+    listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        scroll.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y)
+    end)
+end
+
+-- === ข้อมูลตัวเลือกของ Pet และ Aura ===
+local petOptions = {
+    {display = "Blue Birdie (Basic)", value = "Blue Birdie"},
+    {display = "Orange Hedgehog (Basic)", value = "Orange Hedgehog"},
+    {display = "Red Kitty (Basic)", value = "Red Kitty"},
+    {display = "Blue Bunny (Basic)", value = "Blue Bunny"},
+    {display = "Silver Dog (Basic)", value = "Silver Dog"},
+    {display = "Dark Vampy (Advanced)", value = "Dark Vampy"},
+    {display = "Dark Golem (Advanced)", value = "Dark Golem"},
+    {display = "Green Butterfly (Advanced)", value = "Green Butterfly"},
+    {display = "Yellow Butterfly (Advanced)", value = "Yellow Butterfly"},
+    {display = "Crimson Falcon (Rare)", value = "Crimson Falcon"},
+    {display = "Purple Dragon (Rare)", value = "Purple Dragon"},
+    {display = "Orange Pegasus (Rare)", value = "Orange Pegasus"},
+    {display = "Purple Falcon (Rare)", value = "Purple Falcon"},
+    {display = "Red Dragon (Rare)", value = "Red Dragon"},
+    {display = "White Pegasus (Rare)", value = "White Pegasus"},
+    {display = "Frostwave Legends Penguin (Rare)", value = "Frostwave Legends Penguin"},
+    {display = "Phantom Genesis Dragon (Rare)", value = "Phantom Genesis Dragon"},
+    {display = "Eternal Strike Leviathan (Rare)", value = "Eternal Strike Leviathan"},
+    {display = "Blue Pheonix (Epic)", value = "Blue Pheonix"},
+    {display = "Blue Firecaster (Epic)", value = "Blue Firecaster"},
+    {display = "Golden Pheonix (Epic)", value = "Golden Pheonix"},
+    {display = "Red Firecaster (Epic)", value = "Red Firecaster"},
+    {display = "Green Firecaster (Epic)", value = "Green Firecaster"},
+    {display = "White Pheonix (Epic)", value = "White Pheonix"},
+    {display = "Dark Legends Manticore (Epic)", value = "Dark Legends Manticore"},
+    {display = "Ultimate Supernova Pegasus (Epic)", value = "Ultimate Supernova Pegasus"},
+    {display = "Lightning Strike Phantom (Epic)", value = "Lightning Strike Phantom"},
+    {display = "Golden Viking (Epic)", value = "Golden Viking"},
+    {display = "Infernal Dragon (Unique)", value = "Infernal Dragon"},
+    {display = "Ultra Birdie (Unique)", value = "Ultra Birdie"},
+    {display = "Magic Butterfly (Unique)", value = "Magic Butterfly"},
+    {display = "Aether Spirit Bunny (Unique)", value = "Aether Spirit Bunny"},
+    {display = "Cybernetic Showdown Dragon (Unique)", value = "Cybernetic Showdown Dragon"},
+    {display = "Darkstar Hunter (Unique)", value = "Darkstar Hunter"},
+    {display = "Muscle Sensei (Unique)", value = "Muscle Sensei"},
+    {display = "Neon Guardian (Unique)", value = "Neon Guardian"}
+}
+
+local auraOptions = {
+    {display = "Blue Aura (Basic)", value = "Blue Aura"},
+    {display = "Green Aura (Basic)", value = "Green Aura"},
+    {display = "Purple Aura (Basic)", value = "Purple Aura"},
+    {display = "Red Aura (Basic)", value = "Red Aura"},
+    {display = "Yellow Aura (Basic)", value = "Yellow Aura"},
+    {display = "Ultra Inferno (Rare)", value = "Ultra Inferno"},
+    {display = "Azure Tundra (Epic)", value = "Azure Tundra"},
+    {display = "Grand Supernova (Epic)", value = "Grand Supernova"},
+    {display = "Muscle King (Unique)", value = "Muscle King"},
+    {display = "Entropic Blast (Unique)", value = "Entropic Blast"},
+    {display = "Eternal Megastrike (Unique)", value = "Eternal Megastrike"}
+}
+
+-- === สร้าง UI หมวดหมู่ Buy Pets & Auras ===
+createBugDropdown("กดเลือกสัตว์", petOptions, "SelectedPetToBuy")
+createBugDropdown("กดเลือกหมัด (ออร่า)", auraOptions, "SelectedAuraToBuy")
+
+createBugToggle("กดซื้อสัตว์", "AutoBuyPet")
+createBugToggle("กดซื้อหมัด(ออร่า)", "AutoBuyAura")
+
+-- === สร้าง UI หมวดหมู่ Rock Farming ===
+createBugToggle("ทำบัคสำหรับรี 94980", "AutoRockLegend")
+createBugToggle("ทำบัคสำหรับรี 18980", "AutoRockMuscle")
+createBugToggle("ทำบัคสำหรับรี 14580", "AutoRockAncient")
+
+---------------------------------------------------------
+-- 🌟 โลจิกการทำงานของหน้า "ทำบัค" 🌟
+---------------------------------------------------------
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Loop สำหรับ Auto Buy Pet & Aura
+task.spawn(function()
+    while task.wait(0.1) do
+        if not ScreenGui.Parent then break end -- ตัดลูปเมื่อปิด UI
+        
+        if _G.AutoBuyPet and _G.SelectedPetToBuy ~= "" then
+            local petShop = ReplicatedStorage:FindFirstChild("cPetShopFolder")
+            if petShop then
+                local petToBuy = petShop:FindFirstChild(_G.SelectedPetToBuy)
+                if petToBuy then
+                    pcall(function() ReplicatedStorage.cPetShopRemote:InvokeServer(petToBuy) end)
+                end
+            end
+        end
+        
+        if _G.AutoBuyAura and _G.SelectedAuraToBuy ~= "" then
+            local petShop = ReplicatedStorage:FindFirstChild("cPetShopFolder")
+            if petShop then
+                local auraToBuy = petShop:FindFirstChild(_G.SelectedAuraToBuy)
+                if auraToBuy then
+                    pcall(function() ReplicatedStorage.cPetShopRemote:InvokeServer(auraToBuy) end)
+                end
+            end
+        end
+    end
+end)
+
+-- ฟังก์ชันถือหมัดและต่อยสำหรับฟาร์มหิน
+local function getRockTool()
+    local bp = LocalPlayer:FindFirstChild("Backpack")
+    local char = LocalPlayer.Character
+    if bp and char and char:FindFirstChild("Humanoid") then
+        for _, v in pairs(bp:GetChildren()) do
+            if v.Name == "Punch" then
+                char.Humanoid:EquipTool(v)
+            end
+        end
+    end
+    local me = LocalPlayer:FindFirstChild("muscleEvent")
+    if me then
+        me:FireServer("punch", "leftHand")
+        me:FireServer("punch", "rightHand")
+    end
+end
+
+-- ฟังก์ชันหลักในการฟาร์มหินตาม Durability (ทะลุมิติ)
+local function farmRockLoop(durabilityReq, toggleGlobalVar)
+    task.spawn(function()
+        while task.wait() do
+            if not ScreenGui.Parent then break end
+            
+            if _G[toggleGlobalVar] then
+                local char = LocalPlayer.Character
+                if LocalPlayer:FindFirstChild("Durability") and LocalPlayer.Durability.Value >= durabilityReq then
+                    local machines = workspace:FindFirstChild("machinesFolder")
+                    if machines and char and char:FindFirstChild("LeftHand") and char:FindFirstChild("RightHand") then
+                        for _, v in pairs(machines:GetDescendants()) do
+                            if v.Name == "neededDurability" and v.Value == durabilityReq and v.Parent and v.Parent:FindFirstChild("Rock") then
+                                pcall(function()
+                                    firetouchinterest(v.Parent.Rock, char.RightHand, 0)
+                                    firetouchinterest(v.Parent.Rock, char.RightHand, 1)
+                                    firetouchinterest(v.Parent.Rock, char.LeftHand, 0)
+                                    firetouchinterest(v.Parent.Rock, char.LeftHand, 1)
+                                    getRockTool()
+                                end)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end
+
+-- สั่งรัน Loop ฟาร์มหินแต่ละก้อน (จะทำงานก็ต่อเมื่อตัวแปร _G เป็น true)
+farmRockLoop(1000000, "AutoRockLegend")
+farmRockLoop(5000000, "AutoRockMuscle")
+farmRockLoop(10000000, "AutoRockAncient")
+---------------------------------------------------------
 
 -- ฟังก์ชัน Refresh List ผู้เล่น
 local function refreshLists()
@@ -628,7 +888,15 @@ CloseBtn.MouseButton1Click:Connect(function()
     _G.AutoSize2 = false
     _G.AntiKnockback = false
     _G.HidePunchAnim = false
-    _G.AutoFollow = false -- ปิดตัวแปรใหม่
+    _G.AutoFollow = false 
+    
+    -- ปิดลูปทำบัค
+    _G.AutoBuyPet = false
+    _G.AutoBuyAura = false
+    _G.AutoRockLegend = false
+    _G.AutoRockMuscle = false
+    _G.AutoRockAncient = false
+
     ToggleNoAnim(false) 
     _G.SpectatingPlayer = nil
     local char = LocalPlayer.Character
@@ -636,6 +904,6 @@ CloseBtn.MouseButton1Click:Connect(function()
     runConnection:Disconnect()
     pcPunchConnection:Disconnect()
     kbConnection:Disconnect()
-    followConnection:Disconnect() -- ยกเลิกระบบตาม
+    followConnection:Disconnect() 
     ScreenGui:Destroy()
 end)
