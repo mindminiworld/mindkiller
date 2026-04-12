@@ -471,14 +471,14 @@ local petOptions = {
     {display = "Ultimate Supernova Pegasus (Epic)", value = "Ultimate Supernova Pegasus"},
     {display = "Lightning Strike Phantom (Epic)", value = "Lightning Strike Phantom"},
     {display = "Golden Viking (Epic)", value = "Golden Viking"},
-    {display = "Infernal Dragon (Unique)", value = "Infernal Dragon"},
-    {display = "Ultra Birdie (Unique)", value = "Ultra Birdie"},
-    {display = "Magic Butterfly (Unique)", value = "Magic Butterfly"},
-    {display = "Aether Spirit Bunny (Unique)", value = "Aether Spirit Bunny"},
-    {display = "Cybernetic Showdown Dragon (Unique)", value = "Cybernetic Showdown Dragon"},
-    {display = "Darkstar Hunter (Unique)", value = "Darkstar Hunter"},
-    {display = "Muscle Sensei (Unique)", value = "Muscle Sensei"},
-    {display = "Neon Guardian (Unique)", value = "Neon Guardian"}
+    {display = "มังกรส้ม (Unique)", value = "Infernal Dragon"},
+    {display = "นกฟ้า (Unique)", value = "Ultra Birdie"},
+    {display = "นกชมพู (Unique)", value = "Magic Butterfly"},
+    {display = "กระต่ายม่วง (Unique)", value = "Aether Spirit Bunny"},
+    {display = "สามหัวเขียว (Unique)", value = "Cybernetic Showdown Dragon"},
+    {display = "สามหัวดำ (Unique)", value = "Darkstar Hunter"},
+    {display = "ตัวนินจาแดง (Unique)", value = "Muscle Sensei"},
+    {display = "นีออน (Unique)", value = "Neon Guardian"}
 }
 
 local auraOptions = {
