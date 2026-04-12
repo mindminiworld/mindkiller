@@ -14,6 +14,7 @@ _G.AutoEquipItems = false
 _G.AutoSize2 = false 
 _G.AntiKnockback = false
 _G.HidePunchAnim = false
+_G.AutoFollow = false -- 🌟 ตัวแปรใหม่: สำหรับระบบตามติด + Hitbox
 _G.SelectedTargets = {} 
 _G.SpectatingPlayer = nil 
 local startTime = os.time()
@@ -266,6 +267,13 @@ createFeatureBtn("NoAnim", " [ ปิด ]\n(ลบอนิเมชั่น)"
     Stroke.Color = isOn and Color3.fromRGB(50, 255, 100) or Color3.fromRGB(180, 50, 50)
     ToggleNoAnim(isOn)
 end, "HidePunchAnim")
+
+-- 🌟 ปุ่มใหม่: เปิดระบบเดินตามหลังเป้าหมาย + ขยาย Hitbox
+createFeatureBtn("AutoFollow", " [ ปิด ]\nตามตัว", 330, function(Btn, Stroke, isOn)
+    Btn.Text = isOn and " [ เปิด ]\nตามตัว" or " [ ปิด ]\nตามตัว"
+    Btn.TextColor3 = isOn and Color3.fromRGB(50, 255, 100) or Color3.new(1, 1, 1)
+    Stroke.Color = isOn and Color3.fromRGB(50, 255, 100) or Color3.fromRGB(180, 50, 50)
+end, "AutoFollow")
 
 -- Tab System
 local pages = {}
@@ -573,6 +581,37 @@ local pcPunchConnection = RunService.RenderStepped:Connect(function()
     end
 end)
 
+-- 🌟 ระบบใหม่: วาร์ปตามหลังคนล็อค + ขยาย Hitbox ซ่อนรูป 🌟
+local followConnection = RunService.Heartbeat:Connect(function()
+    if _G.AutoFollow then
+        local myChar = LocalPlayer.Character
+        local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
+
+        if myChar and myHRP then
+            for _, targetPlayer in pairs(Players:GetPlayers()) do
+                if _G.SelectedTargets[targetPlayer.UserId] then
+                    local targetChar = targetPlayer.Character
+                    if targetChar then
+                        local targetHum = targetChar:FindFirstChild("Humanoid")
+                        local targetHRP = targetChar:FindFirstChild("HumanoidRootPart")
+
+                        -- ตรวจสอบว่าเป้าหมายยังมีชีวิตอยู่
+                        if targetHum and targetHum.Health > 0 and targetHRP then
+                            -- ขยาย Hitbox และทำให้ล่องหน
+                            targetHRP.Size = Vector3.new(15, 15, 15)
+                            targetHRP.Transparency = 1
+                            targetHRP.CanCollide = false
+
+                            -- วาร์ปตัวเราไปด้านหลังของเป้าหมายติดๆ (ระยะห่าง 2.5)
+                            myHRP.CFrame = targetHRP.CFrame * CFrame.new(0, 0, 2.5)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
 -- 👁️ ระบบส่องหน้าจอ
 local runConnection = RunService.RenderStepped:Connect(function()
     if _G.SpectatingPlayer and _G.SpectatingPlayer.Character then
@@ -589,6 +628,7 @@ CloseBtn.MouseButton1Click:Connect(function()
     _G.AutoSize2 = false
     _G.AntiKnockback = false
     _G.HidePunchAnim = false
+    _G.AutoFollow = false -- ปิดตัวแปรใหม่
     ToggleNoAnim(false) 
     _G.SpectatingPlayer = nil
     local char = LocalPlayer.Character
@@ -596,5 +636,6 @@ CloseBtn.MouseButton1Click:Connect(function()
     runConnection:Disconnect()
     pcPunchConnection:Disconnect()
     kbConnection:Disconnect()
+    followConnection:Disconnect() -- ยกเลิกระบบตาม
     ScreenGui:Destroy()
 end)
