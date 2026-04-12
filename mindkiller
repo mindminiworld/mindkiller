@@ -369,7 +369,6 @@ local function createBugToggle(text, globalVarName)
     end)
 end
 
--- 🌟 ระบบ Dropdown พร้อมระบบล็อคการเลื่อนทะลุ (Scroll Bleed Fix) 🌟
 local function createBugDropdown(placeholder, options, globalVarName)
     local container = Instance.new("Frame", PageBug)
     container.Size = UDim2.new(1, 0, 0, 35)
@@ -393,13 +392,8 @@ local function createBugDropdown(placeholder, options, globalVarName)
     scroll.ScrollBarThickness = 4
     scroll.Visible = false
 
-    -- ล็อคหน้าจอหลักตอนเอาเมาส์ชี้ Dropdown
-    scroll.MouseEnter:Connect(function()
-        PageBug.ScrollingEnabled = false
-    end)
-    scroll.MouseLeave:Connect(function()
-        PageBug.ScrollingEnabled = true
-    end)
+    scroll.MouseEnter:Connect(function() PageBug.ScrollingEnabled = false end)
+    scroll.MouseLeave:Connect(function() PageBug.ScrollingEnabled = true end)
     
     local listLayout = Instance.new("UIListLayout", scroll)
     
@@ -413,7 +407,7 @@ local function createBugDropdown(placeholder, options, globalVarName)
         else
             container.Size = UDim2.new(1, 0, 0, 35)
             scroll.Visible = false
-            PageBug.ScrollingEnabled = true
+            PageBug.ScrollingEnabled = true 
             if _G[globalVarName] ~= "" then
                 headerBtn.Text = "เลือก: " .. _G[globalVarName] .. " 🔽"
             else
@@ -438,7 +432,7 @@ local function createBugDropdown(placeholder, options, globalVarName)
             isOpen = false
             container.Size = UDim2.new(1, 0, 0, 35)
             scroll.Visible = false
-            PageBug.ScrollingEnabled = true
+            PageBug.ScrollingEnabled = true 
         end)
     end
     scroll.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y)
@@ -508,6 +502,50 @@ createBugDropdown("กดเลือกหมัด (ออร่า)", auraOpt
 createBugToggle("กดซื้อสัตว์", "AutoBuyPet")
 createBugToggle("กดซื้อหมัด(ออร่า)", "AutoBuyAura")
 
+-- 🌟 ระบบจับเวลา + ปุ่มรีเซ็ต สำหรับ Rock Farming 🌟
+local bugTimerContainer = Instance.new("Frame", PageBug)
+bugTimerContainer.Size = UDim2.new(1, 0, 0, 35)
+bugTimerContainer.BackgroundTransparency = 1
+
+local bugTimeLabel = Instance.new("TextLabel", bugTimerContainer)
+bugTimeLabel.Size = UDim2.new(0.7, -5, 1, 0)
+bugTimeLabel.BackgroundColor3 = Color3.fromRGB(35, 15, 15)
+bugTimeLabel.TextColor3 = Color3.fromRGB(150, 255, 150)
+bugTimeLabel.Font = Enum.Font.GothamBold
+bugTimeLabel.TextSize = 14
+bugTimeLabel.Text = "เวลาทำบัค: 00h 00m 00s"
+Instance.new("UICorner", bugTimeLabel).CornerRadius = UDim.new(0, 6)
+
+local bugResetBtn = Instance.new("TextButton", bugTimerContainer)
+bugResetBtn.Size = UDim2.new(0.3, 0, 1, 0)
+bugResetBtn.Position = UDim2.new(0.7, 5, 0, 0)
+bugResetBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+bugResetBtn.Text = "รีเซ็ต"
+bugResetBtn.TextColor3 = Color3.new(1, 1, 1)
+bugResetBtn.Font = Enum.Font.GothamBold
+bugResetBtn.TextSize = 13
+Instance.new("UICorner", bugResetBtn).CornerRadius = UDim.new(0, 6)
+
+local rockFarmTime = 0
+bugResetBtn.MouseButton1Click:Connect(function()
+    rockFarmTime = 0
+    bugTimeLabel.Text = "⏱️ เวลาฟาร์มหิน: 00h 00m 00s"
+end)
+
+task.spawn(function()
+    while task.wait(1) do
+        if not ScreenGui.Parent then break end
+        -- จับเวลาถ้าเปิดปุ่มตีหินอันใดอันหนึ่ง
+        if _G.AutoRockLegend or _G.AutoRockMuscle or _G.AutoRockAncient then
+            rockFarmTime = rockFarmTime + 1
+            local h = math.floor(rockFarmTime / 3600)
+            local m = math.floor((rockFarmTime % 3600) / 60)
+            local s = rockFarmTime % 60
+            bugTimeLabel.Text = string.format("⏱️ เวลาฟาร์มหิน: %02dh %02dm %02ds", h, m, s)
+        end
+    end
+end)
+
 -- === สร้าง UI หมวดหมู่ Rock Farming ===
 createBugToggle("ทำบัคสำหรับรี 94980", "AutoRockLegend")
 createBugToggle("ทำบัคสำหรับรี 18980", "AutoRockMuscle")
@@ -521,7 +559,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Loop สำหรับ Auto Buy Pet & Aura
 task.spawn(function()
     while task.wait(0.1) do
-        if not ScreenGui.Parent then break end -- ตัดลูปเมื่อปิด UI
+        if not ScreenGui.Parent then break end 
         
         if _G.AutoBuyPet and _G.SelectedPetToBuy ~= "" then
             local petShop = ReplicatedStorage:FindFirstChild("cPetShopFolder")
@@ -592,7 +630,7 @@ local function farmRockLoop(durabilityReq, toggleGlobalVar)
     end)
 end
 
--- สั่งรัน Loop ฟาร์มหินแต่ละก้อน (จะทำงานก็ต่อเมื่อตัวแปร _G เป็น true)
+-- สั่งรัน Loop ฟาร์มหินแต่ละก้อน 
 farmRockLoop(1000000, "AutoRockLegend")
 farmRockLoop(5000000, "AutoRockMuscle")
 farmRockLoop(10000000, "AutoRockAncient")
