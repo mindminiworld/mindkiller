@@ -7,7 +7,9 @@ local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Camera = workspace.CurrentCamera
 
--- ตัวแปรตั้งค่าต่างๆ
+-- ==========================================
+-- ⚙️ ตัวแปรตั้งค่าต่างๆ
+-- ==========================================
 _G.AutoPunch = false
 _G.PCPunch = false
 _G.AutoEquipItems = false
@@ -15,10 +17,10 @@ _G.AutoSize2 = false
 _G.AntiKnockback = false
 _G.HidePunchAnim = false
 _G.AutoFollow = false 
+_G.AutoSwitchSize = false
 _G.SelectedTargets = {} 
 _G.SpectatingPlayer = nil 
 
--- ตัวแปรสำหรับเมนูทำบัค
 _G.AutoBuyPet = false
 _G.AutoBuyAura = false
 _G.SelectedPetToBuy = ""
@@ -36,276 +38,186 @@ LocalPlayer.Idled:Connect(function()
 end)
 
 if PlayerGui:FindFirstChild("Mindmain") then
-    PlayerGui.GeminiProUI:Destroy()
+    PlayerGui.Mindmain:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui", PlayerGui)
 ScreenGui.Name = "Mindmain"
 ScreenGui.ResetOnSpawn = false
 
--- 🎨 Main UI Design (Neon Dark Theme)
-local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 480, 0, 520) 
-MainFrame.Position = UDim2.new(0.5, -240, 0.5, -260)
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-MainFrame.BackgroundTransparency = 0.1
+-- ==========================================
+-- 🎨 โครงสร้าง UI ใหม่ (Modern Dashboard + Neon)
+-- ==========================================
+-- Container หลักที่ทำหน้าที่ "ตัด" ส่วนที่ล้นออกมาเวลาพับ
+local ContainerFrame = Instance.new("Frame", ScreenGui)
+ContainerFrame.Size = UDim2.new(0, 550, 0, 400) 
+ContainerFrame.Position = UDim2.new(0.5, -275, 0.5, -200)
+ContainerFrame.BackgroundTransparency = 1
+ContainerFrame.ClipsDescendants = true 
+
+local MainFrame = Instance.new("Frame", ContainerFrame)
+MainFrame.Size = UDim2.new(1, 0, 1, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 30, 50) 
+MainFrame.BackgroundTransparency = 0.15 
 MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.ClipsDescendants = true 
+MainFrame.Active = true 
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 
--- แสงนีออนรอบกรอบ
-local NeonStroke = Instance.new("UIStroke", MainFrame)
-NeonStroke.Color = Color3.fromRGB(255, 60, 60)
-NeonStroke.Thickness = 2.5
-NeonStroke.Transparency = 0.1
-
-local TopBar = Instance.new("TextButton", MainFrame)
-TopBar.Name = "TopBar"
-TopBar.Size = UDim2.new(1, 0, 0, 35)
-TopBar.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
-TopBar.BackgroundTransparency = 0.3
-TopBar.BorderSizePixel = 0
-TopBar.AutoButtonColor = false
-TopBar.Text = ""
-Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 10)
-
-local Header = Instance.new("TextLabel", TopBar)
-Header.Size = UDim2.new(1, -30, 1, 0)
-Header.Position = UDim2.new(0, 15, 0, 0)
-Header.BackgroundTransparency = 1
-Header.Text = "💪 ต่อยพวกไก่ๆควายๆ KDL KT | ดีอ้าย : " .. LocalPlayer.DisplayName
-Header.TextColor3 = Color3.fromRGB(255, 255, 255)
-Header.Font = Enum.Font.GothamBold
-Header.TextSize = 15
-Header.TextXAlignment = Enum.TextXAlignment.Left
-
--- ระบบลากเมนู
-local dragging, dragInput, dragStart, startPos
-local function update(input)
-    local delta = input.Position - dragStart
-    MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-end
-TopBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = MainFrame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then dragging = false end
-        end)
+-- แสงนีออนรอบกรอบ UI
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Color = Color3.fromRGB(0, 255, 255)
+MainStroke.Thickness = 2.5
+task.spawn(function()
+    while task.wait() do
+        MainStroke.Transparency = 0.1 + (math.abs(math.sin(tick() * 1.5)) * 0.4)
     end
 end)
-TopBar.InputChanged:Connect(function(input)
+
+-- 📌 ปุ่ม TH (นีออนวิ่งไปมา)
+local TH_Btn = Instance.new("TextButton", ContainerFrame)
+TH_Btn.Size = UDim2.new(0, 40, 0, 25) 
+TH_Btn.Position = UDim2.new(0, 5, 0, 0)
+TH_Btn.BackgroundTransparency = 1
+TH_Btn.Text = "TH"
+TH_Btn.TextColor3 = Color3.new(1, 1, 1)
+TH_Btn.Font = Enum.Font.GothamBlack
+TH_Btn.TextSize = 16
+TH_Btn.ZIndex = 5
+
+local TH_Stroke = Instance.new("UIStroke", TH_Btn)
+TH_Stroke.Thickness = 1
+TH_Stroke.Color = Color3.fromRGB(0, 120, 200)
+
+local TH_Gradient = Instance.new("UIGradient", TH_Btn)
+TH_Gradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 100, 200)), 
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)), 
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 100, 200))  
+})
+task.spawn(function()
+    while task.wait() do
+        TH_Gradient.Offset = Vector2.new(math.sin(tick() * 2.5), 0)
+    end
+end)
+
+-- 📌 หัวข้อ
+local Header = Instance.new("TextLabel", MainFrame)
+Header.Size = UDim2.new(1, -60, 0, 25) 
+Header.Position = UDim2.new(0, 50, 0, 0)
+Header.BackgroundTransparency = 1
+Header.Text = "ต่อยพวกไก่ๆควายๆ KDL KT | ดีอ้าย : " .. LocalPlayer.DisplayName
+Header.TextColor3 = Color3.fromRGB(255, 255, 255)
+Header.Font = Enum.Font.GothamBold
+Header.TextSize = 13
+Header.TextXAlignment = Enum.TextXAlignment.Left
+
+-- 📌 แถบลาก
+local DragBar = Instance.new("TextButton", ContainerFrame)
+DragBar.Size = UDim2.new(1, -50, 0, 25)
+DragBar.Position = UDim2.new(0, 50, 0, 0)
+DragBar.BackgroundTransparency = 1
+DragBar.Text = ""
+local dragging, dragInput, dragStart, startPos
+DragBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true; dragStart = input.Position; startPos = ContainerFrame.Position
+        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+    end
+end)
+DragBar.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
 end)
 UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then update(input) end
+    if input == dragInput and dragging then 
+        local delta = input.Position - dragStart
+        ContainerFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
 end)
 
-local MainContent = Instance.new("Frame", MainFrame)
-MainContent.Size = UDim2.new(1, 0, 1, -35)
-MainContent.Position = UDim2.new(0, 0, 0, 35)
-MainContent.BackgroundTransparency = 1
+-- 📌 เมนูด้านซ้าย (Sidebar)
+local Sidebar = Instance.new("Frame", MainFrame)
+Sidebar.Size = UDim2.new(0, 140, 1, -25)
+Sidebar.Position = UDim2.new(0, 0, 0, 25)
+Sidebar.BackgroundColor3 = Color3.fromRGB(15, 25, 45)
+Sidebar.BorderSizePixel = 0
+Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 10)
 
-local TabContainer = Instance.new("Frame", MainContent)
-TabContainer.Size = UDim2.new(1, 0, 0, 35)
-TabContainer.Position = UDim2.new(0, 0, 0, 10)
-TabContainer.BackgroundTransparency = 1
+local SidebarFix = Instance.new("Frame", Sidebar) 
+SidebarFix.Size = UDim2.new(0, 10, 1, 0)
+SidebarFix.Position = UDim2.new(1, -10, 0, 0)
+SidebarFix.BackgroundColor3 = Color3.fromRGB(15, 25, 45)
+SidebarFix.BorderSizePixel = 0
 
-local ContentArea = Instance.new("Frame", MainContent)
-ContentArea.Size = UDim2.new(1, -20, 1, -60)
-ContentArea.Position = UDim2.new(0, 10, 0, 55)
+-- 📌 พื้นที่คอนเทนต์
+local ContentArea = Instance.new("Frame", MainFrame)
+ContentArea.Size = UDim2.new(1, -150, 1, -35)
+ContentArea.Position = UDim2.new(0, 145, 0, 30)
 ContentArea.BackgroundTransparency = 1
 
--- ระบบย่อเมนู
+-- ==========================================
+-- 🛠️ พับสคริปต์ 
+-- ==========================================
 local isMinimized = false
-TopBar.MouseButton1Click:Connect(function()
+TH_Btn.MouseButton1Click:Connect(function()
     isMinimized = not isMinimized
     if isMinimized then
-        MainContent.Visible = false 
-        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(0, 480, 0, 35)}):Play()
+        Sidebar.Visible = false
+        ContentArea.Visible = false
+        TweenService:Create(ContainerFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {Size = UDim2.new(0, 550, 0, 25)}):Play()
     else
-        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(0, 480, 0, 520)}):Play()
-        task.wait(0.3)
-        if not isMinimized then MainContent.Visible = true end
+        Sidebar.Visible = true
+        ContentArea.Visible = true
+        TweenService:Create(ContainerFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {Size = UDim2.new(0, 550, 0, 400)}):Play()
     end
 end)
 
-local TabListLayout = Instance.new("UIListLayout", TabContainer)
-TabListLayout.FillDirection = Enum.FillDirection.Horizontal
-TabListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-TabListLayout.Padding = UDim.new(0, 6)
+-- ==========================================
+-- 🗂️ TAB SYSTEM
+-- ==========================================
+local TabContainer = Instance.new("Frame", Sidebar)
+TabContainer.Size = UDim2.new(1, 0, 1, -10)
+TabContainer.Position = UDim2.new(0, 0, 0, 10)
+TabContainer.BackgroundTransparency = 1
+local TabLayout = Instance.new("UIListLayout", TabContainer)
+TabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+TabLayout.Padding = UDim.new(0, 8)
 
-local LeftPanel = Instance.new("Frame", ContentArea)
-LeftPanel.Size = UDim2.new(0.35, 0, 1, 0)
-LeftPanel.BackgroundTransparency = 1
-LeftPanel.Visible = false 
-
-local RightPanel = Instance.new("Frame", ContentArea)
-RightPanel.Size = UDim2.new(0.65, -8, 1, 0)
-RightPanel.Position = UDim2.new(0.35, 8, 0, 0)
-RightPanel.BackgroundTransparency = 1
-RightPanel.Visible = false
-
--- ฟังก์ชันสร้างปุ่มเมนูด้านซ้าย
-local function createFeatureBtn(name, defaultText, posOffset, onClick, globalVarName)
-    local Btn = Instance.new("TextButton", LeftPanel)
-    Btn.Size = UDim2.new(1, 0, 0, 45)
-    Btn.Position = UDim2.new(0, 0, 0, posOffset)
-    Btn.BackgroundColor3 = Color3.fromRGB(35, 15, 15)
-    Btn.Text = defaultText
-    Btn.TextColor3 = Color3.new(1, 1, 1)
-    Btn.Font = Enum.Font.GothamBold
-    Btn.TextSize = 14
-    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 8)
-    
-    local Stroke = Instance.new("UIStroke", Btn)
-    Stroke.Color = Color3.fromRGB(180, 50, 50)
-    Stroke.Thickness = 1.2
-
-    Btn.MouseButton1Click:Connect(function()
-        _G[globalVarName] = not _G[globalVarName]
-        onClick(Btn, Stroke, _G[globalVarName])
-    end)
-end
-
-createFeatureBtn("AutoPunch", " [ ปิด ]\nต่อยพวกโง่", 0, function(Btn, Stroke, isOn)
-    Btn.Text = isOn and " [ เปิด ]\nต่อยพวกโง่" or " [ ปิด ]\nต่อยพวกโง่"
-    Btn.TextColor3 = isOn and Color3.fromRGB(50, 255, 100) or Color3.new(1, 1, 1)
-    Stroke.Color = isOn and Color3.fromRGB(50, 255, 100) or Color3.fromRGB(180, 50, 50)
-end, "AutoPunch")
-
-createFeatureBtn("PCPunch", " [ ปิด ]\nPC ONLY", 55, function(Btn, Stroke, isOn)
-    Btn.Text = isOn and " [ เปิด ]\nPC ONLY" or " [ ปิด ]\nPC ONLY"
-    Btn.TextColor3 = isOn and Color3.fromRGB(50, 255, 100) or Color3.new(1, 1, 1)
-    Stroke.Color = isOn and Color3.fromRGB(50, 255, 100) or Color3.fromRGB(180, 50, 50)
-end, "PCPunch")
-
-createFeatureBtn("AutoEquip", " [ ปิด ]\nถือไข่ + Nan", 110, function(Btn, Stroke, isOn)
-    Btn.Text = isOn and " [ เปิด ]\nถือไข่ + Nan" or " [ ปิด ]\nถือไข่ + Nan"
-    Btn.TextColor3 = isOn and Color3.fromRGB(50, 255, 100) or Color3.new(1, 1, 1)
-    Stroke.Color = isOn and Color3.fromRGB(50, 255, 100) or Color3.fromRGB(180, 50, 50)
-end, "AutoEquipItems")
-
-createFeatureBtn("AutoSize", " [ ปิด ]\nปรับขนาด 2", 165, function(Btn, Stroke, isOn)
-    Btn.Text = isOn and " [ เปิด ]\nปรับขนาด 2" or " [ ปิด ]\nปรับขนาด 2"
-    Btn.TextColor3 = isOn and Color3.fromRGB(50, 255, 100) or Color3.new(1, 1, 1)
-    Stroke.Color = isOn and Color3.fromRGB(50, 255, 100) or Color3.fromRGB(180, 50, 50)
-end, "AutoSize2")
-
-createFeatureBtn("AntiKB", " [ ปิด ]\nกันกระเด็น", 220, function(Btn, Stroke, isOn)
-    Btn.Text = isOn and " [ เปิด ]\nกันกระเด็น" or " [ ปิด ]\nกันกระเด็น"
-    Btn.TextColor3 = isOn and Color3.fromRGB(50, 255, 100) or Color3.new(1, 1, 1)
-    Stroke.Color = isOn and Color3.fromRGB(50, 255, 100) or Color3.fromRGB(180, 50, 50)
-end, "AntiKnockback")
-
-local function ToggleNoAnim(isOn)
-    if isOn then
-        local blockedAnimations = {
-            ["rbxassetid://3638729053"] = true,
-            ["rbxassetid://3638767427"] = true,
-        }
-
-        local function setupAnimationBlocking()
-            local char = LocalPlayer.Character
-            if not char or not char:FindFirstChild("Humanoid") then return end
-            local humanoid = char:FindFirstChild("Humanoid")
-
-            for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
-                if track.Animation then
-                    local animId = track.Animation.AnimationId
-                    local animName = track.Name:lower()
-                    if blockedAnimations[animId] or animName:match("punch") or animName:match("attack") or animName:match("right") then
-                        track:Stop()
-                    end
-                end
-            end
-
-            if not _G.AnimBlockConnection then
-                _G.AnimBlockConnection = humanoid.AnimationPlayed:Connect(function(track)
-                    if track.Animation then
-                        local animId = track.Animation.AnimationId
-                        local animName = track.Name:lower()
-                        if blockedAnimations[animId] or animName:match("punch") or animName:match("attack") or animName:match("right") then
-                            track:Stop()
-                        end
-                    end
-                end)
-            end
-        end
-
-        setupAnimationBlocking()
-
-        if not _G.AnimMonitorConnection then
-            _G.AnimMonitorConnection = RunService.Heartbeat:Connect(function()
-                if tick() % 0.5 < 0.01 then
-                    local char = LocalPlayer.Character
-                    if char and char:FindFirstChild("Humanoid") then
-                        for _, track in pairs(char.Humanoid:GetPlayingAnimationTracks()) do
-                            if track.Animation then
-                                local animId = track.Animation.AnimationId
-                                local animName = track.Name:lower()
-                                if blockedAnimations[animId] or animName:match("punch") or animName:match("attack") or animName:match("right") then
-                                    track:Stop()
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-
-        if not _G.CharacterAddedConnection then
-            _G.CharacterAddedConnection = LocalPlayer.CharacterAdded:Connect(function(newChar)
-                task.wait(1)
-                setupAnimationBlocking()
-            end)
-        end
-    else
-        if _G.AnimBlockConnection then _G.AnimBlockConnection:Disconnect() _G.AnimBlockConnection = nil end
-        if _G.AnimMonitorConnection then _G.AnimMonitorConnection:Disconnect() _G.AnimMonitorConnection = nil end
-        if _G.CharacterAddedConnection then _G.CharacterAddedConnection:Disconnect() _G.CharacterAddedConnection = nil end
-    end
-end
-
-createFeatureBtn("NoAnim", " [ ปิด ]\n(ลบอนิเมชั่น)", 275, function(Btn, Stroke, isOn)
-    Btn.Text = isOn and " [ เปิด ]\n(ลบอนิเมชั่น)" or " [ ปิด ]\n(ลบอนิเมชั่น)"
-    Btn.TextColor3 = isOn and Color3.fromRGB(50, 255, 100) or Color3.new(1, 1, 1)
-    Stroke.Color = isOn and Color3.fromRGB(50, 255, 100) or Color3.fromRGB(180, 50, 50)
-    ToggleNoAnim(isOn)
-end, "HidePunchAnim")
-
-createFeatureBtn("AutoFollow", " [ ปิด ]\nตามตัว", 330, function(Btn, Stroke, isOn)
-    Btn.Text = isOn and " [ เปิด ]\nตามตัว" or " [ ปิด ]\nตามตัว"
-    Btn.TextColor3 = isOn and Color3.fromRGB(50, 255, 100) or Color3.new(1, 1, 1)
-    Stroke.Color = isOn and Color3.fromRGB(50, 255, 100) or Color3.fromRGB(180, 50, 50)
-end, "AutoFollow")
-
--- Tab System
 local pages = {}
 local tabButtons = {}
-local function createTab(name, width)
+
+local function createTab(name)
     local TabBtn = Instance.new("TextButton", TabContainer)
-    TabBtn.Size = UDim2.new(0, width or 100, 1, 0)
-    TabBtn.BackgroundColor3 = Color3.fromRGB(40, 15, 15)
+    TabBtn.Size = UDim2.new(0.9, 0, 0, 28) 
+    TabBtn.BackgroundColor3 = Color3.fromRGB(20, 40, 65)
     TabBtn.Text = name
-    TabBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    TabBtn.TextColor3 = Color3.fromRGB(180, 200, 220)
     TabBtn.Font = Enum.Font.GothamBold
     TabBtn.TextSize = 13
-    Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 8)
+    Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 6)
+    
+    local NeonStroke = Instance.new("UIStroke", TabBtn)
+    NeonStroke.Name = "NeonStroke"
+    NeonStroke.Color = Color3.fromRGB(0, 255, 255)
+    NeonStroke.Thickness = 2
+    NeonStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    NeonStroke.Transparency = 1
 
     local Page = Instance.new("ScrollingFrame", ContentArea)
     Page.Size = UDim2.new(1, 0, 1, 0)
     Page.BackgroundTransparency = 1
     Page.BorderSizePixel = 0
-    Page.ScrollBarThickness = 3
-    Page.ScrollBarImageColor3 = Color3.fromRGB(255, 60, 60)
+    Page.ScrollBarThickness = 0 
     Page.Visible = false
     Page.AutomaticCanvasSize = Enum.AutomaticSize.Y
     
     local PageLayout = Instance.new("UIListLayout", Page)
     PageLayout.Padding = UDim.new(0, 8)
+    
+    local PagePadding = Instance.new("UIPadding", Page)
+    PagePadding.PaddingTop = UDim.new(0, 5)
+    PagePadding.PaddingBottom = UDim.new(0, 5)
+    PagePadding.PaddingLeft = UDim.new(0, 5)
+    PagePadding.PaddingRight = UDim.new(0, 5)
 
     table.insert(pages, Page)
     table.insert(tabButtons, TabBtn)
@@ -313,59 +225,185 @@ local function createTab(name, width)
     TabBtn.MouseButton1Click:Connect(function()
         for _, p in pairs(pages) do p.Visible = false end
         for _, b in pairs(tabButtons) do 
-            b.BackgroundColor3 = Color3.fromRGB(40, 15, 15)
-            b.TextColor3 = Color3.fromRGB(200, 200, 200)
+            b.BackgroundColor3 = Color3.fromRGB(20, 40, 65)
+            b.TextColor3 = Color3.fromRGB(180, 200, 220)
+            if b:FindFirstChild("NeonStroke") then
+                b.NeonStroke.Transparency = 1
+            end
         end
         Page.Visible = true
-        TabBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
         TabBtn.TextColor3 = Color3.new(1, 1, 1)
-        
-        if name == "ล็อคพวกโง่" then
-            LeftPanel.Visible = true
-            RightPanel.Visible = true
-            Page.Parent = RightPanel
-        else
-            LeftPanel.Visible = false
-            RightPanel.Visible = false
-            Page.Parent = ContentArea
+        if TabBtn:FindFirstChild("NeonStroke") then
+            TabBtn.NeonStroke.Transparency = 0
         end
     end)
     return Page
 end
 
-local PageTarget = createTab("ล็อคพวกโง่", 110)
-local PageSpectate = createTab("ส่องพวกโง่", 110)
-local PageBug = createTab("ทำบัค", 110)
-local PageStats = createTab("อื่นๆ", 110)
+local PageTarget = createTab("ล็อคพวกโง่")
+PageTarget.ScrollingEnabled = false
+PageTarget.AutomaticCanvasSize = Enum.AutomaticSize.None
+PageTarget.CanvasSize = UDim2.new(0, 0, 0, 0)
 
--- หน้าแรกเริ่มต้น
-pages[1].Parent = RightPanel
+local PageSpectate = createTab("ส่องพวกโง่")
+local PageBug = createTab("ทำบัค")
+local PageStats = createTab("อื่นๆ")
+
 pages[1].Visible = true
-LeftPanel.Visible = true
-RightPanel.Visible = true
-tabButtons[1].BackgroundColor3 = Color3.fromRGB(200, 40, 40)
 tabButtons[1].TextColor3 = Color3.new(1, 1, 1)
+if tabButtons[1]:FindFirstChild("NeonStroke") then
+    tabButtons[1].NeonStroke.Transparency = 0
+end
 
----------------------------------------------------------
--- 🌟 ส่วนของการสร้างเมนูในหน้า "ทำบัค" 🌟
----------------------------------------------------------
+-- ==========================================
+-- 🛠️ UI COMPONENTS & LOGIC (TAB 1)
+-- ==========================================
+local function createFeatureBtn(parent, defaultText, globalVarName, onClick)
+    local Btn = Instance.new("TextButton", parent)
+    Btn.Size = UDim2.new(1, 0, 0, 40)
+    Btn.BackgroundColor3 = Color3.fromRGB(20, 35, 60)
+    Btn.Text = defaultText
+    Btn.TextColor3 = Color3.new(1, 1, 1)
+    Btn.Font = Enum.Font.GothamBold
+    Btn.TextSize = 13
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
+    
+    local Stroke = Instance.new("UIStroke", Btn)
+    Stroke.Color = Color3.fromRGB(0, 100, 180)
+    Stroke.Thickness = 1.2
+    Stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+    Btn.MouseButton1Click:Connect(function()
+        _G[globalVarName] = not _G[globalVarName]
+        onClick(Btn, Stroke, _G[globalVarName])
+    end)
+end
+
+local function updateBtnStyle(Btn, Stroke, isOn, text)
+    Btn.Text = isOn and " [ เปิด ]\n" .. text or " [ ปิด ]\n" .. text
+    Btn.TextColor3 = isOn and Color3.fromRGB(0, 255, 255) or Color3.new(1, 1, 1)
+    Stroke.Color = isOn and Color3.fromRGB(0, 255, 255) or Color3.fromRGB(0, 100, 180)
+    Btn.BackgroundColor3 = isOn and Color3.fromRGB(15, 50, 80) or Color3.fromRGB(20, 35, 60)
+end
+
+local SplitFrame = Instance.new("Frame", PageTarget)
+SplitFrame.Size = UDim2.new(1, 0, 0, 350)
+SplitFrame.BackgroundTransparency = 1
+
+local LeftFuncs = Instance.new("ScrollingFrame", SplitFrame)
+LeftFuncs.Size = UDim2.new(0.5, -5, 1, 0)
+LeftFuncs.BackgroundTransparency = 1
+LeftFuncs.BorderSizePixel = 0
+LeftFuncs.ScrollBarThickness = 0 
+
+local LFPadding = Instance.new("UIPadding", LeftFuncs)
+LFPadding.PaddingTop = UDim.new(0, 5)
+LFPadding.PaddingBottom = UDim.new(0, 5)
+LFPadding.PaddingLeft = UDim.new(0, 5)
+LFPadding.PaddingRight = UDim.new(0, 5)
+
+local LFLayout = Instance.new("UIListLayout", LeftFuncs)
+LFLayout.Padding = UDim.new(0, 6)
+
+local RightPlayers = Instance.new("ScrollingFrame", SplitFrame)
+RightPlayers.Size = UDim2.new(0.5, -5, 1, 0)
+RightPlayers.Position = UDim2.new(0.5, 5, 0, 0)
+RightPlayers.BackgroundTransparency = 1
+RightPlayers.BorderSizePixel = 0
+RightPlayers.ScrollBarThickness = 0 
+
+local RPPadding = Instance.new("UIPadding", RightPlayers)
+RPPadding.PaddingTop = UDim.new(0, 5)
+RPPadding.PaddingBottom = UDim.new(0, 5)
+RPPadding.PaddingLeft = UDim.new(0, 5)
+RPPadding.PaddingRight = UDim.new(0, 5)
+
+local RPLayout = Instance.new("UIListLayout", RightPlayers)
+RPLayout.Padding = UDim.new(0, 6)
+
+createFeatureBtn(LeftFuncs, " [ ปิด ]\nต่อยพวกโง่", "AutoPunch", function(B, S, isOn) updateBtnStyle(B, S, isOn, "ต่อยพวกโง่") end)
+createFeatureBtn(LeftFuncs, " [ ปิด ]\nPC ONLY", "PCPunch", function(B, S, isOn) updateBtnStyle(B, S, isOn, "PC ONLY") end)
+createFeatureBtn(LeftFuncs, " [ ปิด ]\nถือไข่ + Nan", "AutoEquipItems", function(B, S, isOn) updateBtnStyle(B, S, isOn, "ถือไข่ + Nan") end)
+createFeatureBtn(LeftFuncs, " [ ปิด ]\nปรับขนาด 2", "AutoSize2", function(B, S, isOn) updateBtnStyle(B, S, isOn, "ปรับขนาด 2") end)
+createFeatureBtn(LeftFuncs, " [ ปิด ]\nสลับ Size 2/NaN", "AutoSwitchSize", function(B, S, isOn) updateBtnStyle(B, S, isOn, "สลับ Size 2/NaN") end)
+createFeatureBtn(LeftFuncs, " [ ปิด ]\nกันกระเด็น", "AntiKnockback", function(B, S, isOn) updateBtnStyle(B, S, isOn, "กันกระเด็น") end)
+
+local function ToggleNoAnim(isOn)
+    if isOn then
+        local blockedAnimations = { ["rbxassetid://3638729053"] = true, ["rbxassetid://3638767427"] = true }
+        local function setupAnimationBlocking()
+            local char = LocalPlayer.Character
+            if not char or not char:FindFirstChild("Humanoid") then return end
+            for _, track in pairs(char.Humanoid:GetPlayingAnimationTracks()) do
+                if track.Animation then
+                    local animName = track.Name:lower()
+                    if blockedAnimations[track.Animation.AnimationId] or animName:match("punch") or animName:match("attack") or animName:match("right") then track:Stop() end
+                end
+            end
+            if not _G.AnimBlockConnection then
+                _G.AnimBlockConnection = char.Humanoid.AnimationPlayed:Connect(function(track)
+                    if track.Animation then
+                        local animName = track.Name:lower()
+                        if blockedAnimations[track.Animation.AnimationId] or animName:match("punch") or animName:match("attack") or animName:match("right") then track:Stop() end
+                    end
+                end)
+            end
+        end
+        setupAnimationBlocking()
+        if not _G.AnimMonitorConnection then
+            _G.AnimMonitorConnection = RunService.Heartbeat:Connect(function()
+                if tick() % 0.5 < 0.01 then
+                    local char = LocalPlayer.Character
+                    if char and char:FindFirstChild("Humanoid") then
+                        for _, track in pairs(char.Humanoid:GetPlayingAnimationTracks()) do
+                            if track.Animation then
+                                local animName = track.Name:lower()
+                                if blockedAnimations[track.Animation.AnimationId] or animName:match("punch") or animName:match("attack") or animName:match("right") then track:Stop() end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+        if not _G.CharacterAddedConnection then
+            _G.CharacterAddedConnection = LocalPlayer.CharacterAdded:Connect(function() task.wait(1) setupAnimationBlocking() end)
+        end
+    else
+        if _G.AnimBlockConnection then _G.AnimBlockConnection:Disconnect() _G.AnimBlockConnection = nil end
+        if _G.AnimMonitorConnection then _G.AnimMonitorConnection:Disconnect() _G.AnimMonitorConnection = nil end
+        if _G.CharacterAddedConnection then _G.CharacterAddedConnection:Disconnect() _G.CharacterAddedConnection = nil end
+    end
+end
+createFeatureBtn(LeftFuncs, " [ ปิด ]\n(ลบอนิเมชั่น)", "HidePunchAnim", function(B, S, isOn) updateBtnStyle(B, S, isOn, "(ลบอนิเมชั่น)") ToggleNoAnim(isOn) end)
+createFeatureBtn(LeftFuncs, " [ ปิด ]\nตามตัว", "AutoFollow", function(B, S, isOn) updateBtnStyle(B, S, isOn, "ตามตัว") end)
+
+-- ==========================================
+-- ⚡ สร้าง UI แท็บทำบัค (TAB 3)
+-- ==========================================
 local function createBugToggle(text, globalVarName)
     local btn = Instance.new("TextButton", PageBug)
     btn.Size = UDim2.new(1, 0, 0, 35)
-    btn.BackgroundColor3 = Color3.fromRGB(40, 20, 20)
-    btn.Text = "⬛ " .. text
+    btn.BackgroundColor3 = Color3.fromRGB(20, 35, 60)
+    btn.Text = text 
     btn.TextColor3 = Color3.new(1, 1, 1)
     btn.Font = Enum.Font.GothamMedium
-    btn.TextSize = 14
+    btn.TextSize = 13
     btn.TextXAlignment = Enum.TextXAlignment.Left
     Instance.new("UIPadding", btn).PaddingLeft = UDim.new(0, 10)
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
     
+    local NeonStroke = Instance.new("UIStroke", btn)
+    NeonStroke.Color = Color3.fromRGB(0, 255, 255)
+    NeonStroke.Thickness = 2
+    NeonStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    NeonStroke.Transparency = _G[globalVarName] and 0 or 1
+    
     btn.MouseButton1Click:Connect(function()
         _G[globalVarName] = not _G[globalVarName]
         local isOn = _G[globalVarName]
-        btn.BackgroundColor3 = isOn and Color3.fromRGB(180, 150, 40) or Color3.fromRGB(40, 20, 20)
-        btn.Text = (isOn and "🟨 " or "⬛ ") .. text
+        
+        NeonStroke.Transparency = isOn and 0 or 1
+        btn.TextColor3 = isOn and Color3.fromRGB(0, 255, 255) or Color3.new(1, 1, 1)
     end)
 end
 
@@ -377,19 +415,20 @@ local function createBugDropdown(placeholder, options, globalVarName)
     
     local headerBtn = Instance.new("TextButton", container)
     headerBtn.Size = UDim2.new(1, 0, 0, 35)
-    headerBtn.BackgroundColor3 = Color3.fromRGB(35, 15, 15)
+    headerBtn.BackgroundColor3 = Color3.fromRGB(25, 35, 55)
     headerBtn.TextColor3 = Color3.new(1, 1, 1)
     headerBtn.Font = Enum.Font.GothamMedium
-    headerBtn.TextSize = 14
-    headerBtn.Text = placeholder .. " 🔽"
+    headerBtn.TextSize = 13
+    headerBtn.Text = "  " .. placeholder .. " 🔽"
+    headerBtn.TextXAlignment = Enum.TextXAlignment.Left
     Instance.new("UICorner", headerBtn).CornerRadius = UDim.new(0, 6)
     
     local scroll = Instance.new("ScrollingFrame", container)
-    scroll.Size = UDim2.new(1, 0, 0, 150)
+    scroll.Size = UDim2.new(1, 0, 0, 130)
     scroll.Position = UDim2.new(0, 0, 0, 35)
-    scroll.BackgroundColor3 = Color3.fromRGB(25, 10, 10)
+    scroll.BackgroundColor3 = Color3.fromRGB(15, 25, 40)
     scroll.BorderSizePixel = 0
-    scroll.ScrollBarThickness = 4
+    scroll.ScrollBarThickness = 0 
     scroll.Visible = false
 
     scroll.MouseEnter:Connect(function() PageBug.ScrollingEnabled = false end)
@@ -401,17 +440,17 @@ local function createBugDropdown(placeholder, options, globalVarName)
     headerBtn.MouseButton1Click:Connect(function()
         isOpen = not isOpen
         if isOpen then
-            container.Size = UDim2.new(1, 0, 0, 185)
+            container.Size = UDim2.new(1, 0, 0, 165)
             scroll.Visible = true
-            headerBtn.Text = "เลือกแล้วปิดหน้าต่าง 🔼"
+            headerBtn.Text = "  เลือกแล้วปิดหน้าต่าง 🔼"
         else
             container.Size = UDim2.new(1, 0, 0, 35)
             scroll.Visible = false
             PageBug.ScrollingEnabled = true 
             if _G[globalVarName] ~= "" then
-                headerBtn.Text = "เลือก: " .. _G[globalVarName] .. " 🔽"
+                headerBtn.Text = "  " .. _G[globalVarName] .. " 🔽"
             else
-                headerBtn.Text = placeholder .. " 🔽"
+                headerBtn.Text = "  " .. placeholder .. " 🔽"
             end
         end
     end)
@@ -419,16 +458,17 @@ local function createBugDropdown(placeholder, options, globalVarName)
     for _, opt in ipairs(options) do
         local optBtn = Instance.new("TextButton", scroll)
         optBtn.Size = UDim2.new(1, 0, 0, 30)
-        optBtn.BackgroundColor3 = Color3.fromRGB(35, 15, 15)
+        optBtn.BackgroundColor3 = Color3.fromRGB(20, 30, 50)
         optBtn.BackgroundTransparency = 0.5
         optBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
         optBtn.Font = Enum.Font.Gotham
-        optBtn.TextSize = 13
-        optBtn.Text = opt.display
+        optBtn.TextSize = 12
+        optBtn.Text = "  " .. opt.display
+        optBtn.TextXAlignment = Enum.TextXAlignment.Left
         
         optBtn.MouseButton1Click:Connect(function()
             _G[globalVarName] = opt.value
-            headerBtn.Text = "เลือก: " .. opt.value .. " 🔽"
+            headerBtn.Text = "  " .. opt.value .. " 🔽"
             isOpen = false
             container.Size = UDim2.new(1, 0, 0, 35)
             scroll.Visible = false
@@ -441,61 +481,35 @@ local function createBugDropdown(placeholder, options, globalVarName)
     end)
 end
 
--- === ข้อมูลตัวเลือกของ Pet และ Aura ===
 local petOptions = {
-    {display = "Blue Birdie (Basic)", value = "Blue Birdie"},
-    {display = "Orange Hedgehog (Basic)", value = "Orange Hedgehog"},
-    {display = "Red Kitty (Basic)", value = "Red Kitty"},
-    {display = "Blue Bunny (Basic)", value = "Blue Bunny"},
-    {display = "Silver Dog (Basic)", value = "Silver Dog"},
-    {display = "Dark Vampy (Advanced)", value = "Dark Vampy"},
-    {display = "Dark Golem (Advanced)", value = "Dark Golem"},
-    {display = "Green Butterfly (Advanced)", value = "Green Butterfly"},
-    {display = "Yellow Butterfly (Advanced)", value = "Yellow Butterfly"},
-    {display = "Crimson Falcon (Rare)", value = "Crimson Falcon"},
-    {display = "Purple Dragon (Rare)", value = "Purple Dragon"},
-    {display = "Orange Pegasus (Rare)", value = "Orange Pegasus"},
-    {display = "Purple Falcon (Rare)", value = "Purple Falcon"},
-    {display = "Red Dragon (Rare)", value = "Red Dragon"},
-    {display = "White Pegasus (Rare)", value = "White Pegasus"},
-    {display = "Frostwave Legends Penguin (Rare)", value = "Frostwave Legends Penguin"},
-    {display = "Phantom Genesis Dragon (Rare)", value = "Phantom Genesis Dragon"},
-    {display = "Eternal Strike Leviathan (Rare)", value = "Eternal Strike Leviathan"},
-    {display = "Blue Pheonix (Epic)", value = "Blue Pheonix"},
-    {display = "Blue Firecaster (Epic)", value = "Blue Firecaster"},
-    {display = "Golden Pheonix (Epic)", value = "Golden Pheonix"},
-    {display = "Red Firecaster (Epic)", value = "Red Firecaster"},
-    {display = "Green Firecaster (Epic)", value = "Green Firecaster"},
-    {display = "White Pheonix (Epic)", value = "White Pheonix"},
-    {display = "Dark Legends Manticore (Epic)", value = "Dark Legends Manticore"},
-    {display = "Ultimate Supernova Pegasus (Epic)", value = "Ultimate Supernova Pegasus"},
-    {display = "Lightning Strike Phantom (Epic)", value = "Lightning Strike Phantom"},
-    {display = "Golden Viking (Epic)", value = "Golden Viking"},
-    {display = "มังกรส้ม (Unique)", value = "Infernal Dragon"},
-    {display = "นกฟ้า (Unique)", value = "Ultra Birdie"},
-    {display = "นกชมพู (Unique)", value = "Magic Butterfly"},
-    {display = "กระต่ายม่วง (Unique)", value = "Aether Spirit Bunny"},
-    {display = "สามหัวเขียว (Unique)", value = "Cybernetic Showdown Dragon"},
-    {display = "สามหัวดำ (Unique)", value = "Darkstar Hunter"},
-    {display = "ตัวนินจาแดง (Unique)", value = "Muscle Sensei"},
-    {display = "นีออน (Unique)", value = "Neon Guardian"}
+    {display = "Blue Birdie (Basic)", value = "Blue Birdie"}, {display = "Orange Hedgehog (Basic)", value = "Orange Hedgehog"},
+    {display = "Red Kitty (Basic)", value = "Red Kitty"}, {display = "Blue Bunny (Basic)", value = "Blue Bunny"},
+    {display = "Silver Dog (Basic)", value = "Silver Dog"}, {display = "Dark Vampy (Advanced)", value = "Dark Vampy"},
+    {display = "Dark Golem (Advanced)", value = "Dark Golem"}, {display = "Green Butterfly (Advanced)", value = "Green Butterfly"},
+    {display = "Yellow Butterfly (Advanced)", value = "Yellow Butterfly"}, {display = "Crimson Falcon (Rare)", value = "Crimson Falcon"},
+    {display = "Purple Dragon (Rare)", value = "Purple Dragon"}, {display = "Orange Pegasus (Rare)", value = "Orange Pegasus"},
+    {display = "Purple Falcon (Rare)", value = "Purple Falcon"}, {display = "Red Dragon (Rare)", value = "Red Dragon"},
+    {display = "White Pegasus (Rare)", value = "White Pegasus"}, {display = "Frostwave Legends Penguin (Rare)", value = "Frostwave Legends Penguin"},
+    {display = "Phantom Genesis Dragon (Rare)", value = "Phantom Genesis Dragon"}, {display = "Eternal Strike Leviathan (Rare)", value = "Eternal Strike Leviathan"},
+    {display = "Blue Pheonix (Epic)", value = "Blue Pheonix"}, {display = "Blue Firecaster (Epic)", value = "Blue Firecaster"},
+    {display = "Golden Pheonix (Epic)", value = "Golden Pheonix"}, {display = "Red Firecaster (Epic)", value = "Red Firecaster"},
+    {display = "Green Firecaster (Epic)", value = "Green Firecaster"}, {display = "White Pheonix (Epic)", value = "White Pheonix"},
+    {display = "Dark Legends Manticore (Epic)", value = "Dark Legends Manticore"}, {display = "Ultimate Supernova Pegasus (Epic)", value = "Ultimate Supernova Pegasus"},
+    {display = "Lightning Strike Phantom (Epic)", value = "Lightning Strike Phantom"}, {display = "Golden Viking (Epic)", value = "Golden Viking"},
+    {display = "Infernal Dragon (Unique)", value = "Infernal Dragon"}, {display = "Ultra Birdie (Unique)", value = "Ultra Birdie"},
+    {display = "Magic Butterfly (Unique)", value = "Magic Butterfly"}, {display = "Aether Spirit Bunny (Unique)", value = "Aether Spirit Bunny"},
+    {display = "Cybernetic Showdown Dragon (Unique)", value = "Cybernetic Showdown Dragon"}, {display = "Darkstar Hunter (Unique)", value = "Darkstar Hunter"},
+    {display = "Muscle Sensei (Unique)", value = "Muscle Sensei"}, {display = "Neon Guardian (Unique)", value = "Neon Guardian"}
 }
-
 local auraOptions = {
-    {display = "Blue Aura (Basic)", value = "Blue Aura"},
-    {display = "Green Aura (Basic)", value = "Green Aura"},
-    {display = "Purple Aura (Basic)", value = "Purple Aura"},
-    {display = "Red Aura (Basic)", value = "Red Aura"},
-    {display = "Yellow Aura (Basic)", value = "Yellow Aura"},
-    {display = "Ultra Inferno (Rare)", value = "Ultra Inferno"},
-    {display = "Azure Tundra (Epic)", value = "Azure Tundra"},
-    {display = "Grand Supernova (Epic)", value = "Grand Supernova"},
-    {display = "Muscle King (Unique)", value = "Muscle King"},
-    {display = "Entropic Blast (Unique)", value = "Entropic Blast"},
+    {display = "Blue Aura (Basic)", value = "Blue Aura"}, {display = "Green Aura (Basic)", value = "Green Aura"},
+    {display = "Purple Aura (Basic)", value = "Purple Aura"}, {display = "Red Aura (Basic)", value = "Red Aura"},
+    {display = "Yellow Aura (Basic)", value = "Yellow Aura"}, {display = "Ultra Inferno (Rare)", value = "Ultra Inferno"},
+    {display = "Azure Tundra (Epic)", value = "Azure Tundra"}, {display = "Grand Supernova (Epic)", value = "Grand Supernova"},
+    {display = "Muscle King (Unique)", value = "Muscle King"}, {display = "Entropic Blast (Unique)", value = "Entropic Blast"},
     {display = "Eternal Megastrike (Unique)", value = "Eternal Megastrike"}
 }
 
--- === สร้าง UI หมวดหมู่ Buy Pets & Auras ===
 createBugDropdown("กดเลือกสัตว์", petOptions, "SelectedPetToBuy")
 createBugDropdown("กดเลือกหมัด (ออร่า)", auraOptions, "SelectedAuraToBuy")
 
@@ -509,22 +523,28 @@ bugTimerContainer.BackgroundTransparency = 1
 
 local bugTimeLabel = Instance.new("TextLabel", bugTimerContainer)
 bugTimeLabel.Size = UDim2.new(0.7, -5, 1, 0)
-bugTimeLabel.BackgroundColor3 = Color3.fromRGB(35, 15, 15)
-bugTimeLabel.TextColor3 = Color3.fromRGB(150, 255, 150)
+bugTimeLabel.BackgroundColor3 = Color3.fromRGB(20, 35, 60)
+bugTimeLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
 bugTimeLabel.Font = Enum.Font.GothamBold
-bugTimeLabel.TextSize = 14
-bugTimeLabel.Text = "เวลาทำบัค: 00h 00m 00s"
+bugTimeLabel.TextSize = 13
+bugTimeLabel.Text = "⏱️ เวลาฟาร์มหิน: 00h 00m 00s"
 Instance.new("UICorner", bugTimeLabel).CornerRadius = UDim.new(0, 6)
 
+-- 🟢 เปลี่ยนสีปุ่มรีเซ็ตให้เข้ากับโทน UI (น้ำเงินเข้มขอบฟ้า)
 local bugResetBtn = Instance.new("TextButton", bugTimerContainer)
 bugResetBtn.Size = UDim2.new(0.3, 0, 1, 0)
 bugResetBtn.Position = UDim2.new(0.7, 5, 0, 0)
-bugResetBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-bugResetBtn.Text = "รีเซ็ต"
+bugResetBtn.BackgroundColor3 = Color3.fromRGB(20, 35, 60)
+bugResetBtn.Text = "🔄 รีเซ็ต"
 bugResetBtn.TextColor3 = Color3.new(1, 1, 1)
 bugResetBtn.Font = Enum.Font.GothamBold
 bugResetBtn.TextSize = 13
 Instance.new("UICorner", bugResetBtn).CornerRadius = UDim.new(0, 6)
+
+local ResetStroke = Instance.new("UIStroke", bugResetBtn)
+ResetStroke.Color = Color3.fromRGB(0, 100, 180)
+ResetStroke.Thickness = 1.2
+ResetStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
 local rockFarmTime = 0
 bugResetBtn.MouseButton1Click:Connect(function()
@@ -532,165 +552,93 @@ bugResetBtn.MouseButton1Click:Connect(function()
     bugTimeLabel.Text = "⏱️ เวลาฟาร์มหิน: 00h 00m 00s"
 end)
 
-task.spawn(function()
-    while task.wait(1) do
-        if not ScreenGui.Parent then break end
-        -- จับเวลาถ้าเปิดปุ่มตีหินอันใดอันหนึ่ง
-        if _G.AutoRockLegend or _G.AutoRockMuscle or _G.AutoRockAncient then
-            rockFarmTime = rockFarmTime + 1
-            local h = math.floor(rockFarmTime / 3600)
-            local m = math.floor((rockFarmTime % 3600) / 60)
-            local s = rockFarmTime % 60
-            bugTimeLabel.Text = string.format("⏱️ เวลาฟาร์มหิน: %02dh %02dm %02ds", h, m, s)
-        end
-    end
-end)
-
--- === สร้าง UI หมวดหมู่ Rock Farming ===
 createBugToggle("ทำบัคสำหรับรี 94980", "AutoRockLegend")
 createBugToggle("ทำบัคสำหรับรี 18980", "AutoRockMuscle")
 createBugToggle("ทำบัคสำหรับรี 14580", "AutoRockAncient")
 
----------------------------------------------------------
--- 🌟 โลจิกการทำงานของหน้า "ทำบัค" 🌟
----------------------------------------------------------
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+-- ==========================================
+-- 👥 ระบบรายชื่อผู้เล่น (ฝั่งขวาหน้าล็อคเป้า + หน้าส่อง)
+-- ==========================================
+-- 🟢 เปลี่ยนสีปุ่มเคลียร์ชื่อให้เข้ากับโทน UI (น้ำเงินเข้มขอบฟ้า)
+local ClearLockBtn2 = Instance.new("TextButton", RightPlayers)
+ClearLockBtn2.Size = UDim2.new(1, 0, 0, 35)
+ClearLockBtn2.BackgroundColor3 = Color3.fromRGB(20, 35, 60)
+ClearLockBtn2.Text = "เคลียร์ชื่อพวกโง่"
+ClearLockBtn2.TextColor3 = Color3.new(1, 1, 1)
+ClearLockBtn2.Font = Enum.Font.GothamBold
+ClearLockBtn2.TextSize = 13
+Instance.new("UICorner", ClearLockBtn2).CornerRadius = UDim.new(0, 6)
 
--- Loop สำหรับ Auto Buy Pet & Aura
-task.spawn(function()
-    while task.wait(0.1) do
-        if not ScreenGui.Parent then break end 
-        
-        if _G.AutoBuyPet and _G.SelectedPetToBuy ~= "" then
-            local petShop = ReplicatedStorage:FindFirstChild("cPetShopFolder")
-            if petShop then
-                local petToBuy = petShop:FindFirstChild(_G.SelectedPetToBuy)
-                if petToBuy then
-                    pcall(function() ReplicatedStorage.cPetShopRemote:InvokeServer(petToBuy) end)
-                end
-            end
-        end
-        
-        if _G.AutoBuyAura and _G.SelectedAuraToBuy ~= "" then
-            local petShop = ReplicatedStorage:FindFirstChild("cPetShopFolder")
-            if petShop then
-                local auraToBuy = petShop:FindFirstChild(_G.SelectedAuraToBuy)
-                if auraToBuy then
-                    pcall(function() ReplicatedStorage.cPetShopRemote:InvokeServer(auraToBuy) end)
-                end
-            end
+local ClearStroke = Instance.new("UIStroke", ClearLockBtn2)
+ClearStroke.Color = Color3.fromRGB(0, 100, 180)
+ClearStroke.Thickness = 1.2
+ClearStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+ClearLockBtn2.MouseButton1Click:Connect(function()
+    _G.SelectedTargets = {}
+    for _, child in pairs(RightPlayers:GetChildren()) do
+        if child.Name == "PlayerBtn" then
+            child.BackgroundColor3 = Color3.fromRGB(25, 35, 55)
+            child.Text = child.Text:gsub("🎯 ", "")
+            if child:FindFirstChild("NeonStroke") then child.NeonStroke.Transparency = 1 end
         end
     end
 end)
 
--- ฟังก์ชันถือหมัดและต่อยสำหรับฟาร์มหิน
-local function getRockTool()
-    local bp = LocalPlayer:FindFirstChild("Backpack")
-    local char = LocalPlayer.Character
-    if bp and char and char:FindFirstChild("Humanoid") then
-        for _, v in pairs(bp:GetChildren()) do
-            if v.Name == "Punch" then
-                char.Humanoid:EquipTool(v)
-            end
-        end
-    end
-    local me = LocalPlayer:FindFirstChild("muscleEvent")
-    if me then
-        me:FireServer("punch", "leftHand")
-        me:FireServer("punch", "rightHand")
-    end
-end
-
--- ฟังก์ชันหลักในการฟาร์มหินตาม Durability (ทะลุมิติ)
-local function farmRockLoop(durabilityReq, toggleGlobalVar)
-    task.spawn(function()
-        while task.wait() do
-            if not ScreenGui.Parent then break end
-            
-            if _G[toggleGlobalVar] then
-                local char = LocalPlayer.Character
-                if LocalPlayer:FindFirstChild("Durability") and LocalPlayer.Durability.Value >= durabilityReq then
-                    local machines = workspace:FindFirstChild("machinesFolder")
-                    if machines and char and char:FindFirstChild("LeftHand") and char:FindFirstChild("RightHand") then
-                        for _, v in pairs(machines:GetDescendants()) do
-                            if v.Name == "neededDurability" and v.Value == durabilityReq and v.Parent and v.Parent:FindFirstChild("Rock") then
-                                pcall(function()
-                                    firetouchinterest(v.Parent.Rock, char.RightHand, 0)
-                                    firetouchinterest(v.Parent.Rock, char.RightHand, 1)
-                                    firetouchinterest(v.Parent.Rock, char.LeftHand, 0)
-                                    firetouchinterest(v.Parent.Rock, char.LeftHand, 1)
-                                    getRockTool()
-                                end)
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end)
-end
-
--- สั่งรัน Loop ฟาร์มหินแต่ละก้อน 
-farmRockLoop(1000000, "AutoRockLegend")
-farmRockLoop(5000000, "AutoRockMuscle")
-farmRockLoop(10000000, "AutoRockAncient")
----------------------------------------------------------
-
--- ฟังก์ชัน Refresh List ผู้เล่น
 local function refreshLists()
-    for _, child in pairs(PageTarget:GetChildren()) do
-        if child:IsA("TextButton") or child:IsA("TextLabel") then child:Destroy() end
+    for _, child in pairs(RightPlayers:GetChildren()) do
+        if child.Name == "PlayerBtn" then child:Destroy() end
     end
     for _, child in pairs(PageSpectate:GetChildren()) do
-        if child:IsA("TextButton") or child:IsA("TextLabel") then child:Destroy() end
+        if child:IsA("TextButton") then child:Destroy() end
     end
-
-    local lockLabel = Instance.new("TextLabel", PageTarget)
-    lockLabel.Size = UDim2.new(1, 0, 0, 25)
-    lockLabel.BackgroundTransparency = 1
-    lockLabel.Text = "เลือกชื่อเพื่อพวกโง่ต่อยแม่งเลย"
-    lockLabel.TextColor3 = Color3.fromRGB(255, 150, 150)
-    lockLabel.Font = Enum.Font.GothamBold
-    lockLabel.TextSize = 14
-
-    local ClearLockBtn = Instance.new("TextButton", PageTarget)
-    ClearLockBtn.Size = UDim2.new(1, 0, 0, 35)
-    ClearLockBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-    ClearLockBtn.Text = "เคลียร์ชื่อพวกโง่"
-    ClearLockBtn.TextColor3 = Color3.new(1, 1, 1)
-    ClearLockBtn.Font = Enum.Font.GothamBold
-    ClearLockBtn.TextSize = 14
-    Instance.new("UICorner", ClearLockBtn).CornerRadius = UDim.new(0, 8)
-    ClearLockBtn.MouseButton1Click:Connect(function()
-        _G.SelectedTargets = {}
-        refreshLists()
-    end)
 
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LocalPlayer then
-            local lockBtn = Instance.new("TextButton", PageTarget)
+            -- ปุ่มล็อคเป้า
+            local lockBtn = Instance.new("TextButton", RightPlayers)
+            lockBtn.Name = "PlayerBtn"
             lockBtn.Size = UDim2.new(1, 0, 0, 35)
+            lockBtn.BackgroundColor3 = Color3.fromRGB(25, 35, 55)
+            
             local isLocked = _G.SelectedTargets[p.UserId]
-            lockBtn.BackgroundColor3 = isLocked and Color3.fromRGB(180, 40, 40) or Color3.fromRGB(40, 20, 20)
             lockBtn.Text = (isLocked and "🎯 " or "") .. p.DisplayName
-            lockBtn.TextColor3 = Color3.new(1, 1, 1)
+            lockBtn.TextColor3 = isLocked and Color3.fromRGB(0, 255, 255) or Color3.new(1, 1, 1)
             lockBtn.Font = Enum.Font.GothamMedium
-            lockBtn.TextSize = 14
+            lockBtn.TextSize = 13
             Instance.new("UICorner", lockBtn).CornerRadius = UDim.new(0, 6)
+            
+            local lockStroke = Instance.new("UIStroke", lockBtn)
+            lockStroke.Name = "NeonStroke"
+            lockStroke.Color = Color3.fromRGB(0, 255, 255)
+            lockStroke.Thickness = 2
+            lockStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            lockStroke.Transparency = isLocked and 0 or 1
+
             lockBtn.MouseButton1Click:Connect(function()
                 _G.SelectedTargets[p.UserId] = not _G.SelectedTargets[p.UserId]
                 refreshLists()
             end)
 
+            -- ปุ่มส่อง
             local specBtn = Instance.new("TextButton", PageSpectate)
             specBtn.Size = UDim2.new(1, 0, 0, 35)
+            specBtn.BackgroundColor3 = Color3.fromRGB(25, 35, 55)
+            
             local isSpec = (_G.SpectatingPlayer == p)
-            specBtn.BackgroundColor3 = isSpec and Color3.fromRGB(200, 80, 40) or Color3.fromRGB(40, 20, 20)
             specBtn.Text = (isSpec and "👁️ " or "") .. p.DisplayName
-            specBtn.TextColor3 = Color3.new(1, 1, 1)
+            specBtn.TextColor3 = isSpec and Color3.fromRGB(0, 255, 255) or Color3.new(1, 1, 1)
             specBtn.Font = Enum.Font.GothamMedium
-            specBtn.TextSize = 15
+            specBtn.TextSize = 14
             Instance.new("UICorner", specBtn).CornerRadius = UDim.new(0, 6)
+            
+            local specStroke = Instance.new("UIStroke", specBtn)
+            specStroke.Name = "NeonStroke"
+            specStroke.Color = Color3.fromRGB(0, 255, 255)
+            specStroke.Thickness = 2
+            specStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            specStroke.Transparency = isSpec and 0 or 1
+
             specBtn.MouseButton1Click:Connect(function()
                 if _G.SpectatingPlayer == p then
                     _G.SpectatingPlayer = nil
@@ -704,96 +652,103 @@ local function refreshLists()
         end
     end
 end
-
 Players.PlayerRemoving:Connect(refreshLists)
 Players.PlayerAdded:Connect(refreshLists)
 refreshLists()
 
--- Stats Page
+-- ==========================================
+-- ⚙️ หน้าอื่นๆ (Stats & Close)
+-- ==========================================
 local TimeLabel = Instance.new("TextLabel", PageStats)
-TimeLabel.Size = UDim2.new(1, 0, 0, 50)
-TimeLabel.BackgroundTransparency = 1
-TimeLabel.TextColor3 = Color3.fromRGB(150, 255, 150)
+TimeLabel.Size = UDim2.new(1, 0, 0, 35) 
+TimeLabel.BackgroundColor3 = Color3.fromRGB(25, 35, 55)
+TimeLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
 TimeLabel.Font = Enum.Font.GothamBlack
-TimeLabel.TextSize = 18
+TimeLabel.TextSize = 13 
+Instance.new("UICorner", TimeLabel).CornerRadius = UDim.new(0, 6)
 
+-- 🟢 เปลี่ยนสีปุ่มท่าเต้นให้เข้ากับโทน UI (น้ำเงินเข้มขอบฟ้า)
 local EmoteBtn = Instance.new("TextButton", PageStats)
-EmoteBtn.Size = UDim2.new(1, 0, 0, 45)
-EmoteBtn.BackgroundColor3 = Color3.fromRGB(35, 15, 15)
+EmoteBtn.Size = UDim2.new(1, 0, 0, 35) 
+EmoteBtn.BackgroundColor3 = Color3.fromRGB(20, 35, 60)
 EmoteBtn.Text = "สคริปต์ท่าเต้นทั้งหมด"
 EmoteBtn.TextColor3 = Color3.new(1, 1, 1)
 EmoteBtn.Font = Enum.Font.GothamBold
-EmoteBtn.TextSize = 14
-Instance.new("UICorner", EmoteBtn).CornerRadius = UDim.new(0, 8)
+EmoteBtn.TextSize = 13 
+Instance.new("UICorner", EmoteBtn).CornerRadius = UDim.new(0, 6)
 
-local StrokeE = Instance.new("UIStroke", EmoteBtn)
-StrokeE.Color = Color3.fromRGB(180, 50, 50)
-StrokeE.Thickness = 1.5
+local EmoteStroke = Instance.new("UIStroke", EmoteBtn)
+EmoteStroke.Color = Color3.fromRGB(0, 100, 180)
+EmoteStroke.Thickness = 1.2
+EmoteStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
 EmoteBtn.MouseButton1Click:Connect(function()
-    pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/7yd7/Hub/refs/heads/Branch/GUIS/Emotes.lua"))()
-    end)
+    pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/7yd7/Hub/refs/heads/Branch/GUIS/Emotes.lua"))() end)
     EmoteBtn.Text = "กำลังรันท่าเต้น"
     task.wait(1.5)
     EmoteBtn.Text = "สคริปต์ท่าเต้นทั้งหมด"
 end)
 
+-- 🟢 เปลี่ยนสีปุ่มปิดสคริปต์ให้เข้ากับโทน UI (น้ำเงินเข้มขอบฟ้า)
 local CloseBtn = Instance.new("TextButton", PageStats)
-CloseBtn.Size = UDim2.new(1, 0, 0, 45)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
+CloseBtn.Size = UDim2.new(1, 0, 0, 35) 
+CloseBtn.BackgroundColor3 = Color3.fromRGB(20, 35, 60)
 CloseBtn.Text = "🛑 ปิดสคริปต์"
 CloseBtn.TextColor3 = Color3.new(1, 1, 1)
 CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 16
-Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 8)
+CloseBtn.TextSize = 14 
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 
+local CloseStroke = Instance.new("UIStroke", CloseBtn)
+CloseStroke.Color = Color3.fromRGB(0, 100, 180)
+CloseStroke.Thickness = 1.2
+CloseStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+-- ==========================================
+-- 🚀 LOOPS & GAME LOGIC
+-- ==========================================
 task.spawn(function()
     while task.wait(1) do
         if not ScreenGui.Parent then break end
         local diff = os.time() - startTime
         TimeLabel.Text = string.format("⏱️ เวลาฟาร์ม: %02dm %02ds", math.floor(diff/60), diff%60)
+        
+        if _G.AutoRockLegend or _G.AutoRockMuscle or _G.AutoRockAncient then
+            rockFarmTime = rockFarmTime + 1
+            local h = math.floor(rockFarmTime / 3600)
+            local m = math.floor((rockFarmTime % 3600) / 60)
+            local s = rockFarmTime % 60
+            bugTimeLabel.Text = string.format("⏱️ เวลาฟาร์มหิน: %02dh %02dm %02ds", h, m, s)
+        end
     end
 end)
 
--- ระบบปิดการทำงานไข่
 task.spawn(function()
     while task.wait(0.5) do
         local egg = (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Protein Egg")) or LocalPlayer.Backpack:FindFirstChild("Protein Egg")
-        if egg and egg:IsA("Tool") then
-            egg.Enabled = false 
-        end
+        if egg and egg:IsA("Tool") then egg.Enabled = false end
     end
 end)
 
 local muscleEvent = LocalPlayer:WaitForChild("muscleEvent", 10)
 local remotePath = game:GetService("ReplicatedStorage"):WaitForChild("rEvents"):WaitForChild("changeSpeedSizeRemote")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- LOOP สำหรับ ถือไอเทม, อนิเมชั่นต่อยหลอกๆ และ ขนาด Nan
 task.spawn(function()
     while task.wait(0.05) do
         local char = LocalPlayer.Character
         local backpack = LocalPlayer:FindFirstChild("Backpack")
-        
         if char and char:FindFirstChild("Humanoid") then
             if _G.AutoEquipItems then
                 if backpack then
-                    if not char:FindFirstChild("Punch") then
-                        local punchTool = backpack:FindFirstChild("Punch")
-                        if punchTool then punchTool.Parent = char end 
-                    end
-                    if not char:FindFirstChild("Protein Egg") then
-                        local eggTool = backpack:FindFirstChild("Protein Egg")
-                        if eggTool then eggTool.Parent = char end
-                    end
+                    local pt = backpack:FindFirstChild("Punch") if pt then pt.Parent = char end 
+                    local et = backpack:FindFirstChild("Protein Egg") if et then et.Parent = char end
                 end
                 pcall(function() remotePath:InvokeServer("changeSize", 0/0) end)
             end
-
             if _G.AutoPunch or _G.PCPunch then
                 if not _G.AutoEquipItems and not char:FindFirstChild("Punch") and backpack then
-                    local punchTool = backpack:FindFirstChild("Punch")
-                    if punchTool then char.Humanoid:EquipTool(punchTool) end
+                    local pt = backpack:FindFirstChild("Punch") if pt then char.Humanoid:EquipTool(pt) end
                 end
                 if muscleEvent then
                     muscleEvent:FireServer("punch", "leftHand")
@@ -804,16 +759,23 @@ task.spawn(function()
     end
 end)
 
--- LOOP สำหรับ Auto Size 2
 task.spawn(function()
     while task.wait(1) do
-        if _G.AutoSize2 then
-            pcall(function() remotePath:InvokeServer("changeSize", 2) end)
-        end
+        if _G.AutoSize2 then pcall(function() remotePath:InvokeServer("changeSize", 2) end) end
     end
 end)
 
--- 🗿 ระบบ Anti Knockback
+task.spawn(function()
+    while true do
+        if not ScreenGui.Parent then break end
+        if _G.AutoSwitchSize then
+            pcall(function() remotePath:InvokeServer("changeSize", 2) end)
+            task.wait(0.3) 
+            if _G.AutoSwitchSize then pcall(function() remotePath:InvokeServer("changeSize", 0/0) end) task.wait(0.05) end
+        else task.wait(0.1) end
+    end
+end)
+
 local kbConnection = RunService.Stepped:Connect(function()
     if _G.AntiKnockback then
         pcall(function()
@@ -822,9 +784,7 @@ local kbConnection = RunService.Stepped:Connect(function()
                 for _, part in pairs(char:GetChildren()) do
                     if part:IsA("BasePart") then
                         for _, v in pairs(part:GetChildren()) do
-                            if v:IsA("BodyVelocity") or v:IsA("BodyGyro") or v:IsA("BodyPosition") or v:IsA("BodyThrust") or v:IsA("BodyAngularVelocity") or v:IsA("RocketPropulsion") or v:IsA("VectorForce") or v:IsA("LinearVelocity") then
-                                v:Destroy()
-                            end
+                            if v:IsA("BodyVelocity") or v:IsA("BodyGyro") or v:IsA("BodyPosition") or v:IsA("BodyThrust") or v:IsA("BodyAngularVelocity") or v:IsA("RocketPropulsion") or v:IsA("VectorForce") or v:IsA("LinearVelocity") then v:Destroy() end
                         end
                     end
                 end
@@ -833,75 +793,69 @@ local kbConnection = RunService.Stepped:Connect(function()
     end
 end)
 
--- ⚡ ระบบต่อยระยะไกล (ดึงเป้ามาหาเรา) ⚡
 task.spawn(function()
     while true do
         if _G.AutoPunch then
             pcall(function()
                 local char = LocalPlayer.Character
                 local myArm = char and (char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm"))
-                
                 if myArm and myArm:IsDescendantOf(workspace) then
-                    for _, targetPlayer in pairs(Players:GetPlayers()) do
-                        if _G.SelectedTargets[targetPlayer.UserId] and targetPlayer.Character then
-                            local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
-                            if targetRoot and targetRoot:IsDescendantOf(workspace) then
-                                for _ = 1, 2 do
-                                    firetouchinterest(targetRoot, myArm, 0)
-                                    task.wait(0.01)
-                                    firetouchinterest(targetRoot, myArm, 1)
-                                end
+                    for _, tp in pairs(Players:GetPlayers()) do
+                        if _G.SelectedTargets[tp.UserId] and tp.Character then
+                            local tr = tp.Character:FindFirstChild("HumanoidRootPart")
+                            if tr and tr:IsDescendantOf(workspace) then
+                                firetouchinterest(tr, myArm, 0)
+                                task.wait(0.01)
+                                firetouchinterest(tr, myArm, 1)
                             end
                         end
                     end
                 end
             end)
             task.wait(0.08) 
-        else
-            task.wait(0.1)
-        end
+        else task.wait(0.1) end
     end
 end)
 
--- ⚡ ระบบต่อย PC ONLY (ดึงมาจาก Kill V1) ⚡
-local pcPunchConnection = RunService.RenderStepped:Connect(function()
-    if _G.PCPunch then
-        for _, targetPlayer in pairs(Players:GetPlayers()) do
-            if _G.SelectedTargets[targetPlayer.UserId] and targetPlayer.Character then
-                local targetPart = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
-                local myArm = LocalPlayer.Character and (LocalPlayer.Character:FindFirstChild("RightHand") or LocalPlayer.Character:FindFirstChild("Right Arm"))
-                if targetPart and myArm then
-                    firetouchinterest(targetPart, myArm, 0)
-                    firetouchinterest(targetPart, myArm, 1)
+local isPCPunchRunning = true
+task.spawn(function()
+    while isPCPunchRunning do
+        if _G.PCPunch then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local myArm = char and (char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm"))
+                if myArm and myArm:IsDescendantOf(workspace) then
+                    for _, tp in pairs(Players:GetPlayers()) do
+                        if _G.SelectedTargets[tp.UserId] and tp.Character then
+                            local tr = tp.Character:FindFirstChild("HumanoidRootPart")
+                            if tr and tr:IsDescendantOf(workspace) then
+                                firetouchinterest(tr, myArm, 0)
+                                firetouchinterest(tr, myArm, 1)
+                            end
+                        end
+                    end
                 end
-            end
-        end
+            end)
+            task.wait(0.05) 
+        else task.wait(0.1) end
     end
 end)
 
--- 🌟 ระบบใหม่: วาร์ปตามหลังคนล็อค + ขยาย Hitbox ซ่อนรูป 🌟
 local followConnection = RunService.Heartbeat:Connect(function()
     if _G.AutoFollow then
         local myChar = LocalPlayer.Character
         local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
-
         if myChar and myHRP then
-            for _, targetPlayer in pairs(Players:GetPlayers()) do
-                if _G.SelectedTargets[targetPlayer.UserId] then
-                    local targetChar = targetPlayer.Character
-                    if targetChar then
-                        local targetHum = targetChar:FindFirstChild("Humanoid")
-                        local targetHRP = targetChar:FindFirstChild("HumanoidRootPart")
-
-                        -- ตรวจสอบว่าเป้าหมายยังมีชีวิตอยู่
-                        if targetHum and targetHum.Health > 0 and targetHRP then
-                            -- ขยาย Hitbox และทำให้ล่องหน
-                            targetHRP.Size = Vector3.new(15, 15, 15)
-                            targetHRP.Transparency = 1
-                            targetHRP.CanCollide = false
-
-                            -- วาร์ปตัวเราไปด้านหลังของเป้าหมายติดๆ (ระยะห่าง 2.5)
-                            myHRP.CFrame = targetHRP.CFrame * CFrame.new(0, 0, 2.5)
+            for _, tp in pairs(Players:GetPlayers()) do
+                if _G.SelectedTargets[tp.UserId] then
+                    local tc = tp.Character
+                    if tc then
+                        local th, tHRP = tc:FindFirstChild("Humanoid"), tc:FindFirstChild("HumanoidRootPart")
+                        if th and th.Health > 0 and tHRP then
+                            tHRP.Size = Vector3.new(15, 15, 15)
+                            tHRP.Transparency = 1
+                            tHRP.CanCollide = false
+                            myHRP.CFrame = tHRP.CFrame * CFrame.new(0, 0, 2.5)
                         end
                     end
                 end
@@ -910,38 +864,75 @@ local followConnection = RunService.Heartbeat:Connect(function()
     end
 end)
 
--- 👁️ ระบบส่องหน้าจอ
-local runConnection = RunService.RenderStepped:Connect(function()
-    if _G.SpectatingPlayer and _G.SpectatingPlayer.Character then
-        local targetHum = _G.SpectatingPlayer.Character:FindFirstChild("Humanoid")
-        if targetHum then Camera.CameraSubject = targetHum end
+task.spawn(function()
+    while task.wait(0.1) do
+        if not ScreenGui.Parent then break end 
+        local ps = ReplicatedStorage:FindFirstChild("cPetShopFolder")
+        if ps then
+            if _G.AutoBuyPet and _G.SelectedPetToBuy ~= "" then
+                local pb = ps:FindFirstChild(_G.SelectedPetToBuy) if pb then pcall(function() ReplicatedStorage.cPetShopRemote:InvokeServer(pb) end) end
+            end
+            if _G.AutoBuyAura and _G.SelectedAuraToBuy ~= "" then
+                local ab = ps:FindFirstChild(_G.SelectedAuraToBuy) if ab then pcall(function() ReplicatedStorage.cPetShopRemote:InvokeServer(ab) end) end
+            end
+        end
     end
 end)
 
--- ปุ่มปิดสคริปต์
-CloseBtn.MouseButton1Click:Connect(function()
-    _G.AutoPunch = false
-    _G.PCPunch = false
-    _G.AutoEquipItems = false
-    _G.AutoSize2 = false
-    _G.AntiKnockback = false
-    _G.HidePunchAnim = false
-    _G.AutoFollow = false 
-    
-    -- ปิดลูปทำบัค
-    _G.AutoBuyPet = false
-    _G.AutoBuyAura = false
-    _G.AutoRockLegend = false
-    _G.AutoRockMuscle = false
-    _G.AutoRockAncient = false
+local function getRockTool()
+    local bp, char = LocalPlayer:FindFirstChild("Backpack"), LocalPlayer.Character
+    if bp and char and char:FindFirstChild("Humanoid") then
+        for _, v in pairs(bp:GetChildren()) do if v.Name == "Punch" then char.Humanoid:EquipTool(v) end end
+    end
+    local me = LocalPlayer:FindFirstChild("muscleEvent")
+    if me then me:FireServer("punch", "leftHand") me:FireServer("punch", "rightHand") end
+end
 
+local function farmRockLoop(durabilityReq, toggleGlobalVar)
+    task.spawn(function()
+        while task.wait() do
+            if not ScreenGui.Parent then break end
+            if _G[toggleGlobalVar] then
+                local char = LocalPlayer.Character
+                if LocalPlayer:FindFirstChild("Durability") and LocalPlayer.Durability.Value >= durabilityReq then
+                    local mac = workspace:FindFirstChild("machinesFolder")
+                    if mac and char and char:FindFirstChild("LeftHand") and char:FindFirstChild("RightHand") then
+                        for _, v in pairs(mac:GetDescendants()) do
+                            if v.Name == "neededDurability" and v.Value == durabilityReq and v.Parent and v.Parent:FindFirstChild("Rock") then
+                                pcall(function()
+                                    firetouchinterest(v.Parent.Rock, char.RightHand, 0); firetouchinterest(v.Parent.Rock, char.RightHand, 1)
+                                    firetouchinterest(v.Parent.Rock, char.LeftHand, 0); firetouchinterest(v.Parent.Rock, char.LeftHand, 1)
+                                    getRockTool()
+                                end)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end
+farmRockLoop(1000000, "AutoRockLegend")
+farmRockLoop(5000000, "AutoRockMuscle")
+farmRockLoop(10000000, "AutoRockAncient")
+
+local runConnection = RunService.RenderStepped:Connect(function()
+    if _G.SpectatingPlayer and _G.SpectatingPlayer.Character then
+        local th = _G.SpectatingPlayer.Character:FindFirstChild("Humanoid")
+        if th then Camera.CameraSubject = th end
+    end
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    _G.AutoPunch = false; _G.PCPunch = false; _G.AutoEquipItems = false; _G.AutoSize2 = false
+    _G.AntiKnockback = false; _G.HidePunchAnim = false; _G.AutoFollow = false ; _G.AutoSwitchSize = false
+    _G.AutoBuyPet = false; _G.AutoBuyAura = false; _G.AutoRockLegend = false; _G.AutoRockMuscle = false; _G.AutoRockAncient = false
+    isPCPunchRunning = false
+    local function ToggleNoAnim(isOn) end
     ToggleNoAnim(false) 
     _G.SpectatingPlayer = nil
     local char = LocalPlayer.Character
     if char and char:FindFirstChild("Humanoid") then Camera.CameraSubject = char.Humanoid end
-    runConnection:Disconnect()
-    pcPunchConnection:Disconnect()
-    kbConnection:Disconnect()
-    followConnection:Disconnect() 
+    runConnection:Disconnect(); kbConnection:Disconnect(); followConnection:Disconnect() 
     ScreenGui:Destroy()
 end)
