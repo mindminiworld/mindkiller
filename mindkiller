@@ -374,6 +374,9 @@ LeftFuncs.Size = UDim2.new(0.5, -5, 1, 0)
 LeftFuncs.BackgroundTransparency = 1
 LeftFuncs.BorderSizePixel = 0
 LeftFuncs.ScrollBarThickness = 0 
+LeftFuncs.Active = true -- 🟢 ดักลูกกลิ้งเมาส์
+LeftFuncs.AutomaticCanvasSize = Enum.AutomaticSize.Y -- 🟢 ให้ยืดความยาวอัตโนมัติ
+LeftFuncs.CanvasSize = UDim2.new(0, 0, 0, 0) -- 🟢 เซ็ตค่าเริ่มต้นเป็น 0 เพื่อให้ AutoCanvas คำนวณเอง
 
 local LFPadding = Instance.new("UIPadding", LeftFuncs)
 LFPadding.PaddingTop = UDim.new(0, 5)
@@ -390,6 +393,9 @@ RightPlayers.Position = UDim2.new(0.5, 5, 0, 0)
 RightPlayers.BackgroundTransparency = 1
 RightPlayers.BorderSizePixel = 0
 RightPlayers.ScrollBarThickness = 0 
+RightPlayers.Active = true -- 🟢 ดักลูกกลิ้งเมาส์
+RightPlayers.AutomaticCanvasSize = Enum.AutomaticSize.Y -- 🟢 ให้ยืดความยาวอัตโนมัติเพื่อแสดงชื่อให้ครบ
+RightPlayers.CanvasSize = UDim2.new(0, 0, 0, 0) -- 🟢 เซ็ตค่าเริ่มต้นเป็น 0
 
 local RPPadding = Instance.new("UIPadding", RightPlayers)
 RPPadding.PaddingTop = UDim.new(0, 5)
