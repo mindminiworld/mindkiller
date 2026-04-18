@@ -46,9 +46,86 @@ ScreenGui.Name = "Mindmain"
 ScreenGui.ResetOnSpawn = false
 
 -- ==========================================
+-- 📊 ฟังก์ชันคำนวณสำหรับระบบ ESP ส่องคน
+-- ==========================================
+local function AbbreviateNumber(number)
+    if type(number) ~= "number" then return "0" end
+    if number <= 0 then return "0" end
+    
+    local function formatNum(val)
+        local str = string.format("%.2f", math.floor(val * 100) / 100)
+        str = str:gsub("0+$", "") 
+        str = str:gsub("%.$", "") 
+        return str
+    end
+
+    if number >= 10^18 then return formatNum(number / 10^18) .. "Qi"
+    elseif number >= 10^15 then return formatNum(number / 10^15) .. "Qa"
+    elseif number >= 10^12 then return formatNum(number / 10^12) .. "T"
+    elseif number >= 10^9 then return formatNum(number / 10^9) .. "B"
+    elseif number >= 10^6 then return formatNum(number / 10^6) .. "M"
+    elseif number >= 1000 then return formatNum(number / 1000) .. "K"
+    else return tostring(math.floor(number)) end
+end
+
+local function CalculateTotalHP(player)
+    local baseDura = 0
+    local infernalBuff = 0
+    local duraObj = player:FindFirstChild("Durability")
+    if duraObj and tonumber(duraObj.Value) then baseDura = tonumber(duraObj.Value) end
+    local ultFolder = player:FindFirstChild("ultimatesFolder")
+    if ultFolder then
+        local infernalObj = ultFolder:FindFirstChild("Infernal Health")
+        if infernalObj and tonumber(infernalObj.Value) then infernalBuff = tonumber(infernalObj.Value) end
+    end
+    -- บัพเลือด ขั้นละ 15%
+    local totalPercentBonus = infernalBuff * 15 
+    local bonusHP = baseDura * (totalPercentBonus / 100)
+    return math.floor(baseDura + bonusHP)
+end
+
+local function CalculateTotalDamage(player)
+    local baseStr = 0
+    local demonBuff = 0
+    local leaderstats = player:FindFirstChild("leaderstats")
+    if leaderstats then
+        local strObj = leaderstats:FindFirstChild("Strength")
+        if strObj and tonumber(strObj.Value) then baseStr = tonumber(strObj.Value) end
+    end
+    local ultFolder = player:FindFirstChild("ultimatesFolder")
+    if ultFolder then
+        local demonObj = ultFolder:FindFirstChild("Demon Damage")
+        if demonObj and tonumber(demonObj.Value) then demonBuff = tonumber(demonObj.Value) end
+    end
+    -- หาดาเมจฐาน (Strength / 15)
+    local baseDMG = baseStr / 15
+    -- บัพดาเมจ ขั้นละ 10%
+    local totalPercentBonus = demonBuff * 10
+    local bonusDMG = baseDMG * (totalPercentBonus / 100)
+    return math.floor(baseDMG + bonusDMG)
+end
+
+-- สร้าง UI ESP ซ่อนไว้รอการใช้งาน
+local SpectateESP = Instance.new("BillboardGui")
+SpectateESP.Name = "SpectateESP"
+SpectateESP.Size = UDim2.new(0, 250, 0, 70) 
+SpectateESP.StudsOffset = Vector3.new(0, 5.5, 0) 
+SpectateESP.AlwaysOnTop = true
+SpectateESP.Enabled = false
+SpectateESP.Parent = ScreenGui
+
+local SpectateLabel = Instance.new("TextLabel")
+SpectateLabel.Size = UDim2.new(1, 0, 1, 0)
+SpectateLabel.BackgroundTransparency = 1
+SpectateLabel.TextStrokeTransparency = 0 
+SpectateLabel.Font = Enum.Font.SourceSansBold
+SpectateLabel.TextSize = 22 
+SpectateLabel.RichText = true
+SpectateLabel.Parent = SpectateESP
+
+-- ==========================================
 -- 🎨 โครงสร้าง UI ใหม่ (Modern Dashboard + Neon)
 -- ==========================================
--- Container หลักที่ทำหน้าที่ "ตัด" ส่วนที่ล้นออกมาเวลาพับ
 local ContainerFrame = Instance.new("Frame", ScreenGui)
 ContainerFrame.Size = UDim2.new(0, 550, 0, 400) 
 ContainerFrame.Position = UDim2.new(0.5, -275, 0.5, -200)
@@ -63,7 +140,6 @@ MainFrame.BorderSizePixel = 0
 MainFrame.Active = true 
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 
--- แสงนีออนรอบกรอบ UI
 local MainStroke = Instance.new("UIStroke", MainFrame)
 MainStroke.Color = Color3.fromRGB(0, 255, 255)
 MainStroke.Thickness = 2.5
@@ -73,7 +149,6 @@ task.spawn(function()
     end
 end)
 
--- 📌 ปุ่ม TH (นีออนวิ่งไปมา)
 local TH_Btn = Instance.new("TextButton", ContainerFrame)
 TH_Btn.Size = UDim2.new(0, 40, 0, 25) 
 TH_Btn.Position = UDim2.new(0, 5, 0, 0)
@@ -100,7 +175,6 @@ task.spawn(function()
     end
 end)
 
--- 📌 หัวข้อ
 local Header = Instance.new("TextLabel", MainFrame)
 Header.Size = UDim2.new(1, -60, 0, 25) 
 Header.Position = UDim2.new(0, 50, 0, 0)
@@ -111,7 +185,6 @@ Header.Font = Enum.Font.GothamBold
 Header.TextSize = 13
 Header.TextXAlignment = Enum.TextXAlignment.Left
 
--- 📌 แถบลาก
 local DragBar = Instance.new("TextButton", ContainerFrame)
 DragBar.Size = UDim2.new(1, -50, 0, 25)
 DragBar.Position = UDim2.new(0, 50, 0, 0)
@@ -134,7 +207,6 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- 📌 เมนูด้านซ้าย (Sidebar)
 local Sidebar = Instance.new("Frame", MainFrame)
 Sidebar.Size = UDim2.new(0, 140, 1, -25)
 Sidebar.Position = UDim2.new(0, 0, 0, 25)
@@ -148,17 +220,16 @@ SidebarFix.Position = UDim2.new(1, -10, 0, 0)
 SidebarFix.BackgroundColor3 = Color3.fromRGB(15, 25, 45)
 SidebarFix.BorderSizePixel = 0
 
--- 📌 พื้นที่คอนเทนต์
 local ContentArea = Instance.new("Frame", MainFrame)
 ContentArea.Size = UDim2.new(1, -150, 1, -35)
 ContentArea.Position = UDim2.new(0, 145, 0, 30)
 ContentArea.BackgroundTransparency = 1
 
 -- ==========================================
--- 🛠️ พับสคริปต์ 
+-- 🛠️ พับสคริปต์ (รองรับการกด Left Control ด้วย)
 -- ==========================================
 local isMinimized = false
-TH_Btn.MouseButton1Click:Connect(function()
+local function toggleMenu()
     isMinimized = not isMinimized
     if isMinimized then
         Sidebar.Visible = false
@@ -168,6 +239,14 @@ TH_Btn.MouseButton1Click:Connect(function()
         Sidebar.Visible = true
         ContentArea.Visible = true
         TweenService:Create(ContainerFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {Size = UDim2.new(0, 550, 0, 400)}):Play()
+    end
+end
+
+TH_Btn.MouseButton1Click:Connect(toggleMenu)
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.LeftControl then
+        toggleMenu()
     end
 end)
 
@@ -530,7 +609,6 @@ bugTimeLabel.TextSize = 13
 bugTimeLabel.Text = "⏱️ เวลาฟาร์มหิน: 00h 00m 00s"
 Instance.new("UICorner", bugTimeLabel).CornerRadius = UDim.new(0, 6)
 
--- 🟢 เปลี่ยนสีปุ่มรีเซ็ตให้เข้ากับโทน UI (น้ำเงินเข้มขอบฟ้า)
 local bugResetBtn = Instance.new("TextButton", bugTimerContainer)
 bugResetBtn.Size = UDim2.new(0.3, 0, 1, 0)
 bugResetBtn.Position = UDim2.new(0.7, 5, 0, 0)
@@ -559,7 +637,6 @@ createBugToggle("ทำบัคสำหรับรี 14580", "AutoRockAncien
 -- ==========================================
 -- 👥 ระบบรายชื่อผู้เล่น (ฝั่งขวาหน้าล็อคเป้า + หน้าส่อง)
 -- ==========================================
--- 🟢 เปลี่ยนสีปุ่มเคลียร์ชื่อให้เข้ากับโทน UI (น้ำเงินเข้มขอบฟ้า)
 local ClearLockBtn2 = Instance.new("TextButton", RightPlayers)
 ClearLockBtn2.Size = UDim2.new(1, 0, 0, 35)
 ClearLockBtn2.BackgroundColor3 = Color3.fromRGB(20, 35, 60)
@@ -667,7 +744,6 @@ TimeLabel.Font = Enum.Font.GothamBlack
 TimeLabel.TextSize = 13 
 Instance.new("UICorner", TimeLabel).CornerRadius = UDim.new(0, 6)
 
--- 🟢 เปลี่ยนสีปุ่มท่าเต้นให้เข้ากับโทน UI (น้ำเงินเข้มขอบฟ้า)
 local EmoteBtn = Instance.new("TextButton", PageStats)
 EmoteBtn.Size = UDim2.new(1, 0, 0, 35) 
 EmoteBtn.BackgroundColor3 = Color3.fromRGB(20, 35, 60)
@@ -689,7 +765,6 @@ EmoteBtn.MouseButton1Click:Connect(function()
     EmoteBtn.Text = "สคริปต์ท่าเต้นทั้งหมด"
 end)
 
--- 🟢 เปลี่ยนสีปุ่มปิดสคริปต์ให้เข้ากับโทน UI (น้ำเงินเข้มขอบฟ้า)
 local CloseBtn = Instance.new("TextButton", PageStats)
 CloseBtn.Size = UDim2.new(1, 0, 0, 35) 
 CloseBtn.BackgroundColor3 = Color3.fromRGB(20, 35, 60)
@@ -917,9 +992,38 @@ farmRockLoop(5000000, "AutoRockMuscle")
 farmRockLoop(10000000, "AutoRockAncient")
 
 local runConnection = RunService.RenderStepped:Connect(function()
+    -- ระบบส่องและ ESP อัปเดตในรอบเดียวกัน
     if _G.SpectatingPlayer and _G.SpectatingPlayer.Character then
-        local th = _G.SpectatingPlayer.Character:FindFirstChild("Humanoid")
+        local tc = _G.SpectatingPlayer.Character
+        local th = tc:FindFirstChild("Humanoid")
+        local head = tc:FindFirstChild("Head")
+        
         if th then Camera.CameraSubject = th end
+        
+        if head and th then
+            SpectateESP.Adornee = head
+            SpectateESP.Enabled = true
+            
+            local maxHP = CalculateTotalHP(_G.SpectatingPlayer)
+            local hpRatio = 1
+            if th.MaxHealth > 0 then
+                hpRatio = math.clamp(th.Health / th.MaxHealth, 0, 1)
+            end
+            local currentHP = math.floor(maxHP * hpRatio)
+            
+            local fCurrentHP = AbbreviateNumber(currentHP)
+            local fMaxHP = AbbreviateNumber(maxHP)
+            local dmg = AbbreviateNumber(CalculateTotalDamage(_G.SpectatingPlayer))
+            local name = _G.SpectatingPlayer.DisplayName
+            
+            SpectateLabel.Text = string.format('<font color="#FFD700">%s</font>\n<font color="#FFFFFF">HP: %s/%s</font>\n<font color="#FF5050">DMG: %s</font>', name, fCurrentHP, fMaxHP, dmg)
+        else
+            SpectateESP.Enabled = false
+            SpectateESP.Adornee = nil
+        end
+    else
+        SpectateESP.Enabled = false
+        SpectateESP.Adornee = nil
     end
 end)
 
