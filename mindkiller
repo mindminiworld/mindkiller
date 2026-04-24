@@ -7,9 +7,6 @@ local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Camera = workspace.CurrentCamera
 
--- ==========================================
--- ⚙️ ตัวแปรตั้งค่าต่างๆ
--- ==========================================
 _G.AutoPunch = false
 _G.PCPunch = false
 _G.AutoEquipItems = false
@@ -18,6 +15,8 @@ _G.AntiKnockback = false
 _G.HidePunchAnim = false
 _G.AutoFollow = false 
 _G.AutoSwitchSize = false
+_G.GodMode = false
+_G.AutoSlams = false
 _G.SelectedTargets = {} 
 _G.SpectatingPlayer = nil 
 
@@ -29,9 +28,11 @@ _G.AutoRockLegend = false
 _G.AutoRockMuscle = false
 _G.AutoRockAncient = false
 
+-- ตัวแปรใหม่สำหรับล็อคเป้า OP โดยเฉพาะ
+_G.OPTargets = {}
+
 local startTime = os.time()
 
--- 🛡️ ระบบ Anti AFK
 LocalPlayer.Idled:Connect(function()
     VirtualUser:CaptureController()
     VirtualUser:ClickButton2(Vector2.new())
@@ -45,9 +46,6 @@ local ScreenGui = Instance.new("ScreenGui", PlayerGui)
 ScreenGui.Name = "Mindmain"
 ScreenGui.ResetOnSpawn = false
 
--- ==========================================
--- 📊 ฟังก์ชันคำนวณสำหรับระบบ ESP ส่องคน
--- ==========================================
 local function AbbreviateNumber(number)
     if type(number) ~= "number" then return "0" end
     if number <= 0 then return "0" end
@@ -78,7 +76,6 @@ local function CalculateTotalHP(player)
         local infernalObj = ultFolder:FindFirstChild("Infernal Health")
         if infernalObj and tonumber(infernalObj.Value) then infernalBuff = tonumber(infernalObj.Value) end
     end
-    -- บัพเลือด ขั้นละ 15%
     local totalPercentBonus = infernalBuff * 15 
     local bonusHP = baseDura * (totalPercentBonus / 100)
     return math.floor(baseDura + bonusHP)
@@ -97,15 +94,12 @@ local function CalculateTotalDamage(player)
         local demonObj = ultFolder:FindFirstChild("Demon Damage")
         if demonObj and tonumber(demonObj.Value) then demonBuff = tonumber(demonObj.Value) end
     end
-    -- หาดาเมจฐาน (Strength / 15)
     local baseDMG = baseStr / 15
-    -- บัพดาเมจ ขั้นละ 10%
-    local totalPercentBonus = demonBuff * 10
+    local totalPercentBonus = demonBuff * 10 -- DMG บวก 10%
     local bonusDMG = baseDMG * (totalPercentBonus / 100)
     return math.floor(baseDMG + bonusDMG)
 end
 
--- สร้าง UI ESP ซ่อนไว้รอการใช้งาน
 local SpectateESP = Instance.new("BillboardGui")
 SpectateESP.Name = "SpectateESP"
 SpectateESP.Size = UDim2.new(0, 250, 0, 70) 
@@ -124,7 +118,7 @@ SpectateLabel.RichText = true
 SpectateLabel.Parent = SpectateESP
 
 -- ==========================================
--- 🎨 โครงสร้าง UI ใหม่ (Modern Dashboard + Neon)
+-- 🎨 โครงสร้าง UI ใหม่
 -- ==========================================
 local ContainerFrame = Instance.new("Frame", ScreenGui)
 ContainerFrame.Size = UDim2.new(0, 550, 0, 400) 
@@ -179,7 +173,7 @@ local Header = Instance.new("TextLabel", MainFrame)
 Header.Size = UDim2.new(1, -60, 0, 25) 
 Header.Position = UDim2.new(0, 50, 0, 0)
 Header.BackgroundTransparency = 1
-Header.Text = "ต่อยพวกไก่ๆควายๆ KDL KT | ดีอ้าย : " .. LocalPlayer.DisplayName
+Header.Text = "มีไว้ต่อยพวกไก่ๆควายๆ KDL KT KK TxH | ดีบ่าว : " .. LocalPlayer.DisplayName
 Header.TextColor3 = Color3.fromRGB(255, 255, 255)
 Header.Font = Enum.Font.GothamBold
 Header.TextSize = 13
@@ -225,9 +219,6 @@ ContentArea.Size = UDim2.new(1, -150, 1, -35)
 ContentArea.Position = UDim2.new(0, 145, 0, 30)
 ContentArea.BackgroundTransparency = 1
 
--- ==========================================
--- 🛠️ พับสคริปต์ (รองรับการกด Left Control ด้วย)
--- ==========================================
 local isMinimized = false
 local function toggleMenu()
     isMinimized = not isMinimized
@@ -325,6 +316,12 @@ PageTarget.AutomaticCanvasSize = Enum.AutomaticSize.None
 PageTarget.CanvasSize = UDim2.new(0, 0, 0, 0)
 
 local PageSpectate = createTab("ส่องพวกโง่")
+
+local PageOPTarget = createTab("ต่อยพวกโง่OP")
+PageOPTarget.ScrollingEnabled = false
+PageOPTarget.AutomaticCanvasSize = Enum.AutomaticSize.None
+PageOPTarget.CanvasSize = UDim2.new(0, 0, 0, 0)
+
 local PageBug = createTab("ทำบัค")
 local PageStats = createTab("อื่นๆ")
 
@@ -335,7 +332,7 @@ if tabButtons[1]:FindFirstChild("NeonStroke") then
 end
 
 -- ==========================================
--- 🛠️ UI COMPONENTS & LOGIC (TAB 1)
+-- 🛠️ UI COMPONENTS & LOGIC Helper
 -- ==========================================
 local function createFeatureBtn(parent, defaultText, globalVarName, onClick)
     local Btn = Instance.new("TextButton", parent)
@@ -359,12 +356,40 @@ local function createFeatureBtn(parent, defaultText, globalVarName, onClick)
 end
 
 local function updateBtnStyle(Btn, Stroke, isOn, text)
-    Btn.Text = isOn and " [ เปิด ]\n" .. text or " [ ปิด ]\n" .. text
+    Btn.Text = isOn and " " .. text or " " .. text
     Btn.TextColor3 = isOn and Color3.fromRGB(0, 255, 255) or Color3.new(1, 1, 1)
     Stroke.Color = isOn and Color3.fromRGB(0, 255, 255) or Color3.fromRGB(0, 100, 180)
     Btn.BackgroundColor3 = isOn and Color3.fromRGB(15, 50, 80) or Color3.fromRGB(20, 35, 60)
 end
 
+local function createClickBtn(parent, text, onClick)
+    local Btn = Instance.new("TextButton", parent)
+    Btn.Size = UDim2.new(1, 0, 0, 40)
+    Btn.BackgroundColor3 = Color3.fromRGB(20, 35, 60)
+    Btn.Text = text
+    Btn.TextColor3 = Color3.new(1, 1, 1)
+    Btn.Font = Enum.Font.GothamBold
+    Btn.TextSize = 13
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
+    
+    local Stroke = Instance.new("UIStroke", Btn)
+    Stroke.Color = Color3.fromRGB(0, 100, 180)
+    Stroke.Thickness = 1.2
+    Stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+    Btn.MouseButton1Click:Connect(function()
+        Btn.TextColor3 = Color3.fromRGB(0, 255, 255)
+        Btn.Text = "กำลังทำงาน..."
+        onClick()
+        task.wait(0.5)
+        Btn.TextColor3 = Color3.new(1, 1, 1)
+        Btn.Text = text
+    end)
+end
+
+-- ==========================================
+-- 🎯 TAB 1 : ล็อคพวกโง่
+-- ==========================================
 local SplitFrame = Instance.new("Frame", PageTarget)
 SplitFrame.Size = UDim2.new(1, 0, 0, 350)
 SplitFrame.BackgroundTransparency = 1
@@ -374,9 +399,9 @@ LeftFuncs.Size = UDim2.new(0.5, -5, 1, 0)
 LeftFuncs.BackgroundTransparency = 1
 LeftFuncs.BorderSizePixel = 0
 LeftFuncs.ScrollBarThickness = 0 
-LeftFuncs.Active = true -- 🟢 ดักลูกกลิ้งเมาส์
-LeftFuncs.AutomaticCanvasSize = Enum.AutomaticSize.Y -- 🟢 ให้ยืดความยาวอัตโนมัติ
-LeftFuncs.CanvasSize = UDim2.new(0, 0, 0, 0) -- 🟢 เซ็ตค่าเริ่มต้นเป็น 0 เพื่อให้ AutoCanvas คำนวณเอง
+LeftFuncs.Active = true 
+LeftFuncs.AutomaticCanvasSize = Enum.AutomaticSize.Y 
+LeftFuncs.CanvasSize = UDim2.new(0, 0, 0, 0) 
 
 local LFPadding = Instance.new("UIPadding", LeftFuncs)
 LFPadding.PaddingTop = UDim.new(0, 5)
@@ -393,9 +418,9 @@ RightPlayers.Position = UDim2.new(0.5, 5, 0, 0)
 RightPlayers.BackgroundTransparency = 1
 RightPlayers.BorderSizePixel = 0
 RightPlayers.ScrollBarThickness = 0 
-RightPlayers.Active = true -- 🟢 ดักลูกกลิ้งเมาส์
-RightPlayers.AutomaticCanvasSize = Enum.AutomaticSize.Y -- 🟢 ให้ยืดความยาวอัตโนมัติเพื่อแสดงชื่อให้ครบ
-RightPlayers.CanvasSize = UDim2.new(0, 0, 0, 0) -- 🟢 เซ็ตค่าเริ่มต้นเป็น 0
+RightPlayers.Active = true 
+RightPlayers.AutomaticCanvasSize = Enum.AutomaticSize.Y 
+RightPlayers.CanvasSize = UDim2.new(0, 0, 0, 0) 
 
 local RPPadding = Instance.new("UIPadding", RightPlayers)
 RPPadding.PaddingTop = UDim.new(0, 5)
@@ -406,12 +431,56 @@ RPPadding.PaddingRight = UDim.new(0, 5)
 local RPLayout = Instance.new("UIListLayout", RightPlayers)
 RPLayout.Padding = UDim.new(0, 6)
 
-createFeatureBtn(LeftFuncs, " [ ปิด ]\nต่อยพวกโง่", "AutoPunch", function(B, S, isOn) updateBtnStyle(B, S, isOn, "ต่อยพวกโง่") end)
-createFeatureBtn(LeftFuncs, " [ ปิด ]\nPC ONLY", "PCPunch", function(B, S, isOn) updateBtnStyle(B, S, isOn, "PC ONLY") end)
-createFeatureBtn(LeftFuncs, " [ ปิด ]\nถือไข่ + Nan", "AutoEquipItems", function(B, S, isOn) updateBtnStyle(B, S, isOn, "ถือไข่ + Nan") end)
-createFeatureBtn(LeftFuncs, " [ ปิด ]\nปรับขนาด 2", "AutoSize2", function(B, S, isOn) updateBtnStyle(B, S, isOn, "ปรับขนาด 2") end)
-createFeatureBtn(LeftFuncs, " [ ปิด ]\nสลับ Size 2/NaN", "AutoSwitchSize", function(B, S, isOn) updateBtnStyle(B, S, isOn, "สลับ Size 2/NaN") end)
-createFeatureBtn(LeftFuncs, " [ ปิด ]\nกันกระเด็น", "AntiKnockback", function(B, S, isOn) updateBtnStyle(B, S, isOn, "กันกระเด็น") end)
+createClickBtn(LeftFuncs, "ใส่ตัวแพ็คเพิ่มเลือด", function()
+    task.spawn(function()
+        local petsFolder = LocalPlayer:FindFirstChild("petsFolder")
+        local repStorage = game:GetService("ReplicatedStorage")
+        if not petsFolder then return end
+        for _, folder in pairs(petsFolder:GetChildren()) do
+            if folder:IsA("Folder") then
+                for _, pet in pairs(folder:GetChildren()) do pcall(function() repStorage.rEvents.equipPetEvent:FireServer("unequipPet", pet) end) end
+            end
+        end
+        task.wait(0.3)
+        local petsToEquip = {}
+        for _, folder in pairs(petsFolder:GetChildren()) do
+            if folder:IsA("Folder") then
+                for _, pet in pairs(folder:GetChildren()) do if pet.Name == "Mighty Monster" then table.insert(petsToEquip, pet) end end
+            end
+        end
+        for i = 1, math.min(8, #petsToEquip) do pcall(function() repStorage.rEvents.equipPetEvent:FireServer("equipPet", petsToEquip[i]) end) task.wait(0.1) end
+    end)
+end)
+
+createClickBtn(LeftFuncs, "ใส่ตัวแพ็คดาเมจ", function()
+    task.spawn(function()
+        local petsFolder = LocalPlayer:FindFirstChild("petsFolder")
+        local repStorage = game:GetService("ReplicatedStorage")
+        if not petsFolder then return end
+        for _, folder in pairs(petsFolder:GetChildren()) do
+            if folder:IsA("Folder") then
+                for _, pet in pairs(folder:GetChildren()) do pcall(function() repStorage.rEvents.equipPetEvent:FireServer("unequipPet", pet) end) end
+            end
+        end
+        task.wait(0.3)
+        local petsToEquip = {}
+        for _, folder in pairs(petsFolder:GetChildren()) do
+            if folder:IsA("Folder") then
+                for _, pet in pairs(folder:GetChildren()) do if pet.Name == "Wild Wizard" then table.insert(petsToEquip, pet) end end
+            end
+        end
+        for i = 1, math.min(8, #petsToEquip) do pcall(function() repStorage.rEvents.equipPetEvent:FireServer("equipPet", petsToEquip[i]) end) task.wait(0.1) end
+    end)
+end)
+
+createFeatureBtn(LeftFuncs, " อมตะไว้แก้พวกกากใช้Nan", "GodMode", function(B, S, isOn) updateBtnStyle(B, S, isOn, "อมตะไว้แก้พวกกากใช้Nan") end)
+createFeatureBtn(LeftFuncs, " ออโต้ทุบ (ไว้ใช้ตอนอมตะ)", "AutoSlams", function(B, S, isOn) updateBtnStyle(B, S, isOn, "ออโต้ทุบ (ไว้ใช้ตอนอมตะ)") end)
+createFeatureBtn(LeftFuncs, " ต่อยพวกโง่", "AutoPunch", function(B, S, isOn) updateBtnStyle(B, S, isOn, "ต่อยพวกโง่") end)
+createFeatureBtn(LeftFuncs, " ต่อยเฉพาะคอม", "PCPunch", function(B, S, isOn) updateBtnStyle(B, S, isOn, "ต่อยเฉพาะคอม") end)
+createFeatureBtn(LeftFuncs, " ต่อยตอนตาย (เปิดคู่กับต่อยพวกโง่)", "AutoEquipItems", function(B, S, isOn) updateBtnStyle(B, S, isOn, "ต่อยตอนตาย (เปิดคู่กับต่อยพวกโง่)") end)
+createFeatureBtn(LeftFuncs, " ปรับขนาด 2", "AutoSize2", function(B, S, isOn) updateBtnStyle(B, S, isOn, "ปรับขนาด 2") end)
+createFeatureBtn(LeftFuncs, " สลับ Size 2/NaN", "AutoSwitchSize", function(B, S, isOn) updateBtnStyle(B, S, isOn, "สลับ Size 2/NaN") end)
+createFeatureBtn(LeftFuncs, " กันกระเด็น", "AntiKnockback", function(B, S, isOn) updateBtnStyle(B, S, isOn, "กันกระเด็น") end)
 
 local function ToggleNoAnim(isOn)
     if isOn then
@@ -459,11 +528,81 @@ local function ToggleNoAnim(isOn)
         if _G.CharacterAddedConnection then _G.CharacterAddedConnection:Disconnect() _G.CharacterAddedConnection = nil end
     end
 end
-createFeatureBtn(LeftFuncs, " [ ปิด ]\n(ลบอนิเมชั่น)", "HidePunchAnim", function(B, S, isOn) updateBtnStyle(B, S, isOn, "(ลบอนิเมชั่น)") ToggleNoAnim(isOn) end)
-createFeatureBtn(LeftFuncs, " [ ปิด ]\nตามตัว", "AutoFollow", function(B, S, isOn) updateBtnStyle(B, S, isOn, "ตามตัว") end)
+createFeatureBtn(LeftFuncs, " ลบอนิเมชั่น", "HidePunchAnim", function(B, S, isOn) updateBtnStyle(B, S, isOn, "ลบอนิเมชั่น") ToggleNoAnim(isOn) end)
+createFeatureBtn(LeftFuncs, " ตามตัว", "AutoFollow", function(B, S, isOn) updateBtnStyle(B, S, isOn, "ตามตัว") end)
 
 -- ==========================================
--- ⚡ สร้าง UI แท็บทำบัค (TAB 3)
+-- ⚔️ TAB ใหม่: ต่อยพวกโง่OP (ปรับ UI แยกฝั่งแบบหน้าแรก)
+-- ==========================================
+local SplitFrameOP = Instance.new("Frame", PageOPTarget)
+SplitFrameOP.Size = UDim2.new(1, 0, 0, 350)
+SplitFrameOP.BackgroundTransparency = 1
+
+local LeftFuncsOP = Instance.new("ScrollingFrame", SplitFrameOP)
+LeftFuncsOP.Size = UDim2.new(0.5, -5, 1, 0)
+LeftFuncsOP.BackgroundTransparency = 1
+LeftFuncsOP.BorderSizePixel = 0
+LeftFuncsOP.ScrollBarThickness = 0 
+LeftFuncsOP.Active = true 
+LeftFuncsOP.AutomaticCanvasSize = Enum.AutomaticSize.Y 
+LeftFuncsOP.CanvasSize = UDim2.new(0, 0, 0, 0) 
+
+local LFOPPadding = Instance.new("UIPadding", LeftFuncsOP)
+LFOPPadding.PaddingTop = UDim.new(0, 5)
+LFOPPadding.PaddingBottom = UDim.new(0, 5)
+LFOPPadding.PaddingLeft = UDim.new(0, 5)
+LFOPPadding.PaddingRight = UDim.new(0, 5)
+
+local LFOPLayout = Instance.new("UIListLayout", LeftFuncsOP)
+LFOPLayout.Padding = UDim.new(0, 6)
+
+local RightPlayersOP = Instance.new("ScrollingFrame", SplitFrameOP)
+RightPlayersOP.Size = UDim2.new(0.5, -5, 1, 0)
+RightPlayersOP.Position = UDim2.new(0.5, 5, 0, 0)
+RightPlayersOP.BackgroundTransparency = 1
+RightPlayersOP.BorderSizePixel = 0
+RightPlayersOP.ScrollBarThickness = 0 
+RightPlayersOP.Active = true 
+RightPlayersOP.AutomaticCanvasSize = Enum.AutomaticSize.Y 
+RightPlayersOP.CanvasSize = UDim2.new(0, 0, 0, 0) 
+
+local RPOPPadding = Instance.new("UIPadding", RightPlayersOP)
+RPOPPadding.PaddingTop = UDim.new(0, 5)
+RPOPPadding.PaddingBottom = UDim.new(0, 5)
+RPOPPadding.PaddingLeft = UDim.new(0, 5)
+RPOPPadding.PaddingRight = UDim.new(0, 5)
+
+local RPOPLayout = Instance.new("UIListLayout", RightPlayersOP)
+RPOPLayout.Padding = UDim.new(0, 6)
+
+-- ใส่ปุ่มฝั่งซ้ายของ OP
+createClickBtn(LeftFuncsOP, "ต่อยตอนตายแบบOP", function()
+    local urls = {
+        "https://raw.githubusercontent.com/Shiinax007/block-eat-egg/refs/heads/main/lua",
+        "https://raw.githubusercontent.com/Shiinax007/anti-fly/refs/heads/main/lua",
+        "https://raw.githubusercontent.com/Shiinax007/auto-eat-shake/refs/heads/main/lua",
+        "https://raw.githubusercontent.com/Shiinax007/auto-kill/refs/heads/main/lua",
+        "https://raw.githubusercontent.com/Shiinax007/auto-equip-egg/refs/heads/main/lua"
+    }
+    for _, url in ipairs(urls) do
+        task.spawn(function()
+            local success, response = pcall(function() return game:HttpGet(url) end)
+            if success and response then pcall(loadstring(response)) end
+        end)
+    end
+end)
+
+createClickBtn(LeftFuncsOP, "ล้างเซิฟ", function()
+    local url = "https://raw.githubusercontent.com/Shiinax007/kill-all/refs/heads/main/lua"
+    task.spawn(function()
+        local success, response = pcall(function() return game:HttpGet(url) end)
+        if success and response then loadstring(response)() end
+    end)
+end)
+
+
+-- ==========================================
+-- ⚡ สร้าง UI แท็บทำบัค
 -- ==========================================
 local function createBugToggle(text, globalVarName)
     local btn = Instance.new("TextButton", PageBug)
@@ -486,7 +625,6 @@ local function createBugToggle(text, globalVarName)
     btn.MouseButton1Click:Connect(function()
         _G[globalVarName] = not _G[globalVarName]
         local isOn = _G[globalVarName]
-        
         NeonStroke.Transparency = isOn and 0 or 1
         btn.TextColor3 = isOn and Color3.fromRGB(0, 255, 255) or Color3.new(1, 1, 1)
     end)
@@ -597,11 +735,9 @@ local auraOptions = {
 
 createBugDropdown("กดเลือกสัตว์", petOptions, "SelectedPetToBuy")
 createBugDropdown("กดเลือกหมัด (ออร่า)", auraOptions, "SelectedAuraToBuy")
-
 createBugToggle("กดซื้อสัตว์", "AutoBuyPet")
 createBugToggle("กดซื้อหมัด(ออร่า)", "AutoBuyAura")
 
--- 🌟 ระบบจับเวลา + ปุ่มรีเซ็ต สำหรับ Rock Farming 🌟
 local bugTimerContainer = Instance.new("Frame", PageBug)
 bugTimerContainer.Size = UDim2.new(1, 0, 0, 35)
 bugTimerContainer.BackgroundTransparency = 1
@@ -612,7 +748,7 @@ bugTimeLabel.BackgroundColor3 = Color3.fromRGB(20, 35, 60)
 bugTimeLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
 bugTimeLabel.Font = Enum.Font.GothamBold
 bugTimeLabel.TextSize = 13
-bugTimeLabel.Text = "⏱️ เวลาฟาร์มหิน: 00h 00m 00s"
+bugTimeLabel.Text = "⏱️ เวลาทำบัค: 00h 00m 00s"
 Instance.new("UICorner", bugTimeLabel).CornerRadius = UDim.new(0, 6)
 
 local bugResetBtn = Instance.new("TextButton", bugTimerContainer)
@@ -633,7 +769,7 @@ ResetStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 local rockFarmTime = 0
 bugResetBtn.MouseButton1Click:Connect(function()
     rockFarmTime = 0
-    bugTimeLabel.Text = "⏱️ เวลาฟาร์มหิน: 00h 00m 00s"
+    bugTimeLabel.Text = "⏱️ เวลาทำบัค: 00h 00m 00s"
 end)
 
 createBugToggle("ทำบัคสำหรับรี 94980", "AutoRockLegend")
@@ -641,23 +777,22 @@ createBugToggle("ทำบัคสำหรับรี 18980", "AutoRockMuscle
 createBugToggle("ทำบัคสำหรับรี 14580", "AutoRockAncient")
 
 -- ==========================================
--- 👥 ระบบรายชื่อผู้เล่น (ฝั่งขวาหน้าล็อคเป้า + หน้าส่อง)
+-- 👥 ระบบรายชื่อผู้เล่น & ปุ่มล้างค่า
 -- ==========================================
-local ClearLockBtn2 = Instance.new("TextButton", RightPlayers)
-ClearLockBtn2.Size = UDim2.new(1, 0, 0, 35)
-ClearLockBtn2.BackgroundColor3 = Color3.fromRGB(20, 35, 60)
-ClearLockBtn2.Text = "เคลียร์ชื่อพวกโง่"
-ClearLockBtn2.TextColor3 = Color3.new(1, 1, 1)
-ClearLockBtn2.Font = Enum.Font.GothamBold
-ClearLockBtn2.TextSize = 13
-Instance.new("UICorner", ClearLockBtn2).CornerRadius = UDim.new(0, 6)
-
-local ClearStroke = Instance.new("UIStroke", ClearLockBtn2)
+local ClearLockBtn = Instance.new("TextButton", RightPlayers)
+ClearLockBtn.Size = UDim2.new(1, 0, 0, 35)
+ClearLockBtn.BackgroundColor3 = Color3.fromRGB(20, 35, 60)
+ClearLockBtn.Text = "เคลียร์ชื่อพวกโง่"
+ClearLockBtn.TextColor3 = Color3.new(1, 1, 1)
+ClearLockBtn.Font = Enum.Font.GothamBold
+ClearLockBtn.TextSize = 13
+Instance.new("UICorner", ClearLockBtn).CornerRadius = UDim.new(0, 6)
+local ClearStroke = Instance.new("UIStroke", ClearLockBtn)
 ClearStroke.Color = Color3.fromRGB(0, 100, 180)
 ClearStroke.Thickness = 1.2
 ClearStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
-ClearLockBtn2.MouseButton1Click:Connect(function()
+ClearLockBtn.MouseButton1Click:Connect(function()
     _G.SelectedTargets = {}
     for _, child in pairs(RightPlayers:GetChildren()) do
         if child.Name == "PlayerBtn" then
@@ -668,17 +803,39 @@ ClearLockBtn2.MouseButton1Click:Connect(function()
     end
 end)
 
+local ClearOPBtn = Instance.new("TextButton", RightPlayersOP)
+ClearOPBtn.Size = UDim2.new(1, 0, 0, 35)
+ClearOPBtn.BackgroundColor3 = Color3.fromRGB(20, 35, 60)
+ClearOPBtn.Text = "เคลียร์เป้าหมาย OP"
+ClearOPBtn.TextColor3 = Color3.new(1, 1, 1)
+ClearOPBtn.Font = Enum.Font.GothamBold
+ClearOPBtn.TextSize = 13
+Instance.new("UICorner", ClearOPBtn).CornerRadius = UDim.new(0, 6)
+local ClearOPStroke = Instance.new("UIStroke", ClearOPBtn)
+ClearOPStroke.Color = Color3.fromRGB(0, 100, 180)
+ClearOPStroke.Thickness = 1.2
+ClearOPStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+ClearOPBtn.MouseButton1Click:Connect(function()
+    _G.OPTargets = {}
+    for _, child in pairs(RightPlayersOP:GetChildren()) do
+        if child.Name == "PlayerBtnOP" then
+            child.BackgroundColor3 = Color3.fromRGB(25, 35, 55)
+            child.Text = child.Text:gsub("🔥 ", "")
+            if child:FindFirstChild("NeonStroke") then child.NeonStroke.Transparency = 1 end
+        end
+    end
+end)
+
 local function refreshLists()
-    for _, child in pairs(RightPlayers:GetChildren()) do
-        if child.Name == "PlayerBtn" then child:Destroy() end
-    end
-    for _, child in pairs(PageSpectate:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
-    end
+    -- ล้างรายชื่อเก่าออกก่อน
+    for _, child in pairs(RightPlayers:GetChildren()) do if child.Name == "PlayerBtn" then child:Destroy() end end
+    for _, child in pairs(RightPlayersOP:GetChildren()) do if child.Name == "PlayerBtnOP" then child:Destroy() end end
+    for _, child in pairs(PageSpectate:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
 
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LocalPlayer then
-            -- ปุ่มล็อคเป้า
+            -- 1. ระบบล็อคพวกโง่ (แท็บแรก)
             local lockBtn = Instance.new("TextButton", RightPlayers)
             lockBtn.Name = "PlayerBtn"
             lockBtn.Size = UDim2.new(1, 0, 0, 35)
@@ -690,7 +847,6 @@ local function refreshLists()
             lockBtn.Font = Enum.Font.GothamMedium
             lockBtn.TextSize = 13
             Instance.new("UICorner", lockBtn).CornerRadius = UDim.new(0, 6)
-            
             local lockStroke = Instance.new("UIStroke", lockBtn)
             lockStroke.Name = "NeonStroke"
             lockStroke.Color = Color3.fromRGB(0, 255, 255)
@@ -703,7 +859,31 @@ local function refreshLists()
                 refreshLists()
             end)
 
-            -- ปุ่มส่อง
+            -- 2. ระบบเป้าหมาย OP (แท็บ OP)
+            local opBtn = Instance.new("TextButton", RightPlayersOP)
+            opBtn.Name = "PlayerBtnOP"
+            opBtn.Size = UDim2.new(1, 0, 0, 35)
+            opBtn.BackgroundColor3 = Color3.fromRGB(25, 35, 55)
+            
+            local isOPLocked = _G.OPTargets[p.UserId]
+            opBtn.Text = (isOPLocked and "🔥 " or "") .. p.DisplayName
+            opBtn.TextColor3 = isOPLocked and Color3.fromRGB(255, 50, 50) or Color3.new(1, 1, 1)
+            opBtn.Font = Enum.Font.GothamMedium
+            opBtn.TextSize = 13
+            Instance.new("UICorner", opBtn).CornerRadius = UDim.new(0, 6)
+            local opStroke = Instance.new("UIStroke", opBtn)
+            opStroke.Name = "NeonStroke"
+            opStroke.Color = Color3.fromRGB(255, 50, 50)
+            opStroke.Thickness = 2
+            opStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            opStroke.Transparency = isOPLocked and 0 or 1
+
+            opBtn.MouseButton1Click:Connect(function()
+                _G.OPTargets[p.UserId] = not _G.OPTargets[p.UserId]
+                refreshLists()
+            end)
+
+            -- 3. ระบบส่องพวกโง่ (อิง Nickname)
             local specBtn = Instance.new("TextButton", PageSpectate)
             specBtn.Size = UDim2.new(1, 0, 0, 35)
             specBtn.BackgroundColor3 = Color3.fromRGB(25, 35, 55)
@@ -714,7 +894,6 @@ local function refreshLists()
             specBtn.Font = Enum.Font.GothamMedium
             specBtn.TextSize = 14
             Instance.new("UICorner", specBtn).CornerRadius = UDim.new(0, 6)
-            
             local specStroke = Instance.new("UIStroke", specBtn)
             specStroke.Name = "NeonStroke"
             specStroke.Color = Color3.fromRGB(0, 255, 255)
@@ -758,7 +937,6 @@ EmoteBtn.TextColor3 = Color3.new(1, 1, 1)
 EmoteBtn.Font = Enum.Font.GothamBold
 EmoteBtn.TextSize = 13 
 Instance.new("UICorner", EmoteBtn).CornerRadius = UDim.new(0, 6)
-
 local EmoteStroke = Instance.new("UIStroke", EmoteBtn)
 EmoteStroke.Color = Color3.fromRGB(0, 100, 180)
 EmoteStroke.Thickness = 1.2
@@ -779,7 +957,6 @@ CloseBtn.TextColor3 = Color3.new(1, 1, 1)
 CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.TextSize = 14 
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
-
 local CloseStroke = Instance.new("UIStroke", CloseBtn)
 CloseStroke.Color = Color3.fromRGB(0, 100, 180)
 CloseStroke.Thickness = 1.2
@@ -799,8 +976,32 @@ task.spawn(function()
             local h = math.floor(rockFarmTime / 3600)
             local m = math.floor((rockFarmTime % 3600) / 60)
             local s = rockFarmTime % 60
-            bugTimeLabel.Text = string.format("⏱️ เวลาฟาร์มหิน: %02dh %02dm %02ds", h, m, s)
+            bugTimeLabel.Text = string.format("⏱️ เวลาทำบัค: %02dh %02dm %02ds", h, m, s)
         end
+    end
+end)
+
+task.spawn(function()
+    while true do
+        if _G.GodMode then pcall(function() game:GetService("ReplicatedStorage").rEvents.brawlEvent:FireServer("joinBrawl") end) task.wait(0.1) else task.wait(0.2) end
+    end
+end)
+
+task.spawn(function()
+    while true do
+        if _G.AutoSlams then
+            pcall(function()
+                local player = LocalPlayer
+                local groundSlam = player.Backpack:FindFirstChild("Ground Slam") or (player.Character and player.Character:FindFirstChild("Ground Slam"))
+                if groundSlam then
+                    if groundSlam.Parent == player.Backpack then groundSlam.Parent = player.Character end
+                    if groundSlam:FindFirstChild("attackTime") then groundSlam.attackTime.Value = 0 end
+                    player.muscleEvent:FireServer("slam")
+                    groundSlam:Activate()
+                end
+            end)
+            task.wait(0.1)
+        else task.wait(0.2) end
     end
 end)
 
@@ -822,14 +1023,25 @@ task.spawn(function()
         if char and char:FindFirstChild("Humanoid") then
             if _G.AutoEquipItems then
                 if backpack then
-                    local pt = backpack:FindFirstChild("Punch") if pt then pt.Parent = char end 
-                    local et = backpack:FindFirstChild("Protein Egg") if et then et.Parent = char end
+                    local pt = backpack:FindFirstChild("Punch")
+                    if pt then pt.Parent = char end
+                end
+                local currentEggInChar = char:FindFirstChild("Protein Egg")
+                if currentEggInChar then
+                    if currentEggInChar:IsA("Tool") and currentEggInChar.Enabled then currentEggInChar.Enabled = false end
+                else
+                    if backpack then
+                        local et = backpack:FindFirstChild("Protein Egg")
+                        if et and et:IsA("Tool") then et.Parent = char end
+                    end
                 end
                 pcall(function() remotePath:InvokeServer("changeSize", 0/0) end)
             end
+            
             if _G.AutoPunch or _G.PCPunch then
-                if not _G.AutoEquipItems and not char:FindFirstChild("Punch") and backpack then
-                    local pt = backpack:FindFirstChild("Punch") if pt then char.Humanoid:EquipTool(pt) end
+                if not char:FindFirstChild("Punch") and backpack then
+                    local pt = backpack:FindFirstChild("Punch") 
+                    if pt then char.Humanoid:EquipTool(pt) end
                 end
                 if muscleEvent then
                     muscleEvent:FireServer("punch", "leftHand")
@@ -840,18 +1052,13 @@ task.spawn(function()
     end
 end)
 
-task.spawn(function()
-    while task.wait(1) do
-        if _G.AutoSize2 then pcall(function() remotePath:InvokeServer("changeSize", 2) end) end
-    end
-end)
+task.spawn(function() while task.wait(1) do if _G.AutoSize2 then pcall(function() remotePath:InvokeServer("changeSize", 2) end) end end end)
 
 task.spawn(function()
     while true do
         if not ScreenGui.Parent then break end
         if _G.AutoSwitchSize then
-            pcall(function() remotePath:InvokeServer("changeSize", 2) end)
-            task.wait(0.3) 
+            pcall(function() remotePath:InvokeServer("changeSize", 2) end) task.wait(0.3) 
             if _G.AutoSwitchSize then pcall(function() remotePath:InvokeServer("changeSize", 0/0) end) task.wait(0.05) end
         else task.wait(0.1) end
     end
@@ -909,16 +1116,42 @@ task.spawn(function()
                     for _, tp in pairs(Players:GetPlayers()) do
                         if _G.SelectedTargets[tp.UserId] and tp.Character then
                             local tr = tp.Character:FindFirstChild("HumanoidRootPart")
-                            if tr and tr:IsDescendantOf(workspace) then
-                                firetouchinterest(tr, myArm, 0)
-                                firetouchinterest(tr, myArm, 1)
-                            end
+                            if tr and tr:IsDescendantOf(workspace) then firetouchinterest(tr, myArm, 0) firetouchinterest(tr, myArm, 1) end
                         end
                     end
                 end
             end)
             task.wait(0.05) 
         else task.wait(0.1) end
+    end
+end)
+
+-- 🟢 ลูป AutoKill OP (ทำงานตลอดเวลา เช็คจากรายชื่อที่ติ๊กไฟลุกในหน้า OP) 🟢
+task.spawn(function()
+    local function getHand()
+        local char = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
+        return char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm")
+    end
+
+    while true do
+        pcall(function()
+            local hand = getHand()
+            if hand and hand:IsDescendantOf(workspace) then
+                for _, target in pairs(Players:GetPlayers()) do
+                    if _G.OPTargets[target.UserId] and target.Character then
+                        local root = target.Character:FindFirstChild("HumanoidRootPart")
+                        if root and root:IsDescendantOf(workspace) then
+                            for _=1,2 do
+                                firetouchinterest(hand,root,0)
+                                task.wait(0.01)
+                                firetouchinterest(hand,root,1)
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+        task.wait(0.08)
     end
 end)
 
@@ -936,7 +1169,7 @@ local followConnection = RunService.Heartbeat:Connect(function()
                             tHRP.Size = Vector3.new(15, 15, 15)
                             tHRP.Transparency = 1
                             tHRP.CanCollide = false
-                            myHRP.CFrame = tHRP.CFrame * CFrame.new(0, 0, 2.5)
+                            myHRP.CFrame = tHRP.CFrame * CFrame.new(0, 0, 2.5) -- ไม่ทะลุกำแพงตามที่สั่งไว้
                         end
                     end
                 end
@@ -981,8 +1214,10 @@ local function farmRockLoop(durabilityReq, toggleGlobalVar)
                         for _, v in pairs(mac:GetDescendants()) do
                             if v.Name == "neededDurability" and v.Value == durabilityReq and v.Parent and v.Parent:FindFirstChild("Rock") then
                                 pcall(function()
-                                    firetouchinterest(v.Parent.Rock, char.RightHand, 0); firetouchinterest(v.Parent.Rock, char.RightHand, 1)
-                                    firetouchinterest(v.Parent.Rock, char.LeftHand, 0); firetouchinterest(v.Parent.Rock, char.LeftHand, 1)
+                                    firetouchinterest(v.Parent.Rock, char.RightHand, 0)
+                                    firetouchinterest(v.Parent.Rock, char.RightHand, 1)
+                                    firetouchinterest(v.Parent.Rock, char.LeftHand, 0)
+                                    firetouchinterest(v.Parent.Rock, char.LeftHand, 1)
                                     getRockTool()
                                 end)
                             end
@@ -998,7 +1233,6 @@ farmRockLoop(5000000, "AutoRockMuscle")
 farmRockLoop(10000000, "AutoRockAncient")
 
 local runConnection = RunService.RenderStepped:Connect(function()
-    -- ระบบส่องและ ESP อัปเดตในรอบเดียวกัน
     if _G.SpectatingPlayer and _G.SpectatingPlayer.Character then
         local tc = _G.SpectatingPlayer.Character
         local th = tc:FindFirstChild("Humanoid")
@@ -1012,9 +1246,7 @@ local runConnection = RunService.RenderStepped:Connect(function()
             
             local maxHP = CalculateTotalHP(_G.SpectatingPlayer)
             local hpRatio = 1
-            if th.MaxHealth > 0 then
-                hpRatio = math.clamp(th.Health / th.MaxHealth, 0, 1)
-            end
+            if th.MaxHealth > 0 then hpRatio = math.clamp(th.Health / th.MaxHealth, 0, 1) end
             local currentHP = math.floor(maxHP * hpRatio)
             
             local fCurrentHP = AbbreviateNumber(currentHP)
@@ -1034,15 +1266,23 @@ local runConnection = RunService.RenderStepped:Connect(function()
 end)
 
 CloseBtn.MouseButton1Click:Connect(function()
-    _G.AutoPunch = false; _G.PCPunch = false; _G.AutoEquipItems = false; _G.AutoSize2 = false
-    _G.AntiKnockback = false; _G.HidePunchAnim = false; _G.AutoFollow = false ; _G.AutoSwitchSize = false
-    _G.AutoBuyPet = false; _G.AutoBuyAura = false; _G.AutoRockLegend = false; _G.AutoRockMuscle = false; _G.AutoRockAncient = false
+    _G.AutoPunch = false
+    _G.PCPunch = false; _G.AutoEquipItems = false; _G.AutoSize2 = false
+    _G.AntiKnockback = false; _G.HidePunchAnim = false
+    _G.AutoFollow = false ; _G.AutoSwitchSize = false
+    _G.AutoBuyPet = false; _G.AutoBuyAura = false; _G.AutoRockLegend = false
+    _G.AutoRockMuscle = false; _G.AutoRockAncient = false
+    _G.GodMode = false
+    _G.AutoSlams = false
+    _G.OPTargets = {}
     isPCPunchRunning = false
+    
     local function ToggleNoAnim(isOn) end
     ToggleNoAnim(false) 
     _G.SpectatingPlayer = nil
     local char = LocalPlayer.Character
     if char and char:FindFirstChild("Humanoid") then Camera.CameraSubject = char.Humanoid end
-    runConnection:Disconnect(); kbConnection:Disconnect(); followConnection:Disconnect() 
+    runConnection:Disconnect()
+    kbConnection:Disconnect(); followConnection:Disconnect() 
     ScreenGui:Destroy()
 end)
